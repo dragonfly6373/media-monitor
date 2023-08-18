@@ -1,10 +1,12 @@
 import axios from 'axios';
+import * as dotenv from 'dotenv';
 
 import {IResponseData} from './ResponseData';
 import monitorController from '../monitor/MonitorController';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort } from '../lib/utils';
 
+dotenv.config();
 const logger = new Logger('RestController');
 
 var INSTANCE: RestController | null = null;
@@ -86,7 +88,7 @@ export default class RestController {
                 if (!roomId) throw new Error("Invalid input. Params: roomId (required), clientUrl (optional)");
                 // TODO: implement update livestream clientUrl by roomId
                 logger.info("reload", {roomId, clientUrl});
-                monitorController.getClient(roomId)?.reload();
+                monitorController.reload(roomId);
                 resData.data = true;
                 break;
             }

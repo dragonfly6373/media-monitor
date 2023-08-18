@@ -1,10 +1,13 @@
 import {exec} from'child_process';
 import path from 'path';
+import * as dotenv from 'dotenv';
 
 import colors from 'colors';
 import moment from 'moment';
 
 import {parseBoolean} from './utils';
+
+dotenv.config();
 
 const level             = parseInt(process.env.LOGGER_LEVEL || "4") || 4;
 const isWriteToFile     = parseBoolean(process.env.LOGGER_WRITE_FILE);

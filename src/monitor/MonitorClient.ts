@@ -1,10 +1,13 @@
 import child_process from 'child_process';
 import path from 'path';
-// const chromium = require('chrome-aws-lambda');
+import * as dotenv from 'dotenv';
 import puppeteer, { Browser, Page } from 'puppeteer';
+
 import { mkDirByPathSync, parseBoolean } from '../lib/utils';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
+
+dotenv.config();
 
 const useXVFB = parseBoolean(process.env.XVFB);
 const screenWidth = parseInt(process.env.SCREEN_WIDTH || "1280");
@@ -12,11 +15,13 @@ const screenHeight = parseInt(process.env.SCREEN_HEIGHT || "720");
 const VIEWPORT = {width: screenWidth, height: screenHeight};
 
 const logger = new Logger('MonitorClient');
+logger.debug("configs:", {useXVFB, screenWidth, screenHeight});
 
 export default class MonitorClient {
     roomId: string;
     clientUrl: string;
     rtmpUrl: string = "";
+    screenNo: number = 99;
 
     xvfbProcess: any;
     browser: Browser | null = null;
@@ -29,9 +34,10 @@ export default class MonitorClient {
     }
 
     async start(screenNo: number) {
-        logger.info(`RoomID ${this.roomId} start new monitor client`);
-        if (useXVFB) this.xvfbProcess = await this._newScreen(screenNo);
-        this.browser = await this._newBrowser(useXVFB ? screenNo : 0, this.clientUrl);
+        logger.info(`RoomID ${this.roomId} start new monitor client`, useXVFB ? "use Xvfb" : "");
+        this.screenNo = screenNo;
+        if (useXVFB) this.xvfbProcess = await this._newScreen();
+        this.browser = await this._newBrowser(this.clientUrl);
     }
 
     async reload(clientUrl?: string) {
@@ -87,8 +93,8 @@ export default class MonitorClient {
             this.rtmpProcess = this._streamTo(this.rtmpUrl);
             logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`, options);
         } catch(error: any) {
-            logger.error("fail to live stream to " + this.rtmpUrl + "with error:", error);
-            throw new Error("fail to create live stream with error:" + error.message);
+            logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
+            throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);
         }
         return {
             rtmp: replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
@@ -106,8 +112,8 @@ export default class MonitorClient {
             }
             this.rtmpProcess = this._streamTo(this.rtmpUrl);
         } catch(error: any) {
-            logger.error("fail to live stream to " + this.rtmpUrl + "with error:", error);
-            throw new Error("fail to create live stream with error:" + error.message);
+            logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
+            throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);
         }
         return true;
     }
@@ -117,7 +123,7 @@ export default class MonitorClient {
             '-video_size', `${screenWidth}x${screenHeight}`,
             '-framerate',  '30',
             '-f',          'x11grab',
-            '-i',          ':1.0',
+            '-i',          `:${this.screenNo}.0`,
             '-f',          'pulse',
             '-ac',         '2',
             '-i',          'default',
@@ -140,25 +146,26 @@ export default class MonitorClient {
         }
     }
 
-    async _newScreen(screenNo: number): Promise<child_process.ChildProcessWithoutNullStreams> {
-        // Attempt to launch Xvfb
+    // Attempt to launch Xvfb
+    async _newScreen(): Promise<child_process.ChildProcessWithoutNullStreams> {
         try {
-            // let output = await execShellCommand(`Xvfb :99 -ac -screen ${screenNo} ${screenWidth}x${screenHeight}x24 -nolisten tcp &`);
-            // logger.info("newScreen" + output);
+            logger.info(`RoomID ${this.roomId} Xvfb start newScreen`, this.screenNo, `${screenWidth}x${screenHeight}x24`);
             let process = spawnProcess("Xvfb", [
-                ":99", "-ac",
-                "-screen", screenNo.toString(), `${screenWidth}x${screenHeight}x24`,
+                ":" + this.screenNo, "-ac",
+                "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
+                "-nocursor",
                 "-nolisten",
                 "tcp &"
-            ], logger.info);
+            ], logger.info.bind(logger));
             return process;
         } catch(error: any) {
-            throw new Error("fail to start Xvfb virtual screen with error " + error.message);
+            throw new Error(`RoomID ${this.roomId} Failed to start Xvfb virtual screen with error ` + error.message);
         }
     }
 
-    async _newBrowser(screenNo: number, clientUrl: string): Promise<Browser> {
+    async _newBrowser(clientUrl: string): Promise<Browser> {
         let browser: Browser | null = null;
+        logger.info(`RoomID ${this.roomId} new browser client on screen: ${this.screenNo}`);
     
         try {
             browser = await puppeteer.launch({
@@ -166,8 +173,15 @@ export default class MonitorClient {
                 executablePath: 'google-chrome',
                 headless: false, // we will use headful chrome
                 ignoreHTTPSErrors: true,
-                args: ['--no-sandbox', '--disable-infobars', '--use-fake-ui-for-media-stream']
-                //, '--start-fullscreen', '--display=' + screenNo]
+                env: {DISPLAY: `:${this.screenNo}`},
+                args: [
+                    '--no-sandbox',
+                    '--disable-infobars',
+                    '--disable-setuid-sandbox',
+                    '--use-fake-ui-for-media-stream',
+                    '--start-fullscreen',
+                    '--display=' + this.screenNo
+                ]
             });
             // let page: Page = await browser.newPage();
             let [page] = await browser.pages();
@@ -179,11 +193,10 @@ export default class MonitorClient {
                 this._handlePage(page);
             });
             await page.goto(clientUrl, { waitUntil: 'networkidle2' });
-            logger.info(`RoomID ${this.roomId} new browser client`);
             this._handlePage(page);
         } catch (error: any) {
             // return callback(error);
-            logger.error("ERROR", error);
+            logger.error(`RoomID ${this.roomId} Failed to create new browser with error:`, error);
         } finally {
             return browser as Browser;
         }
@@ -218,4 +231,3 @@ export default class MonitorClient {
         }
     }
 }
-
