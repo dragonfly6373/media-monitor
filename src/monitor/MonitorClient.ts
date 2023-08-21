@@ -1,21 +1,20 @@
 import child_process from 'child_process';
 import path from 'path';
-import * as dotenv from 'dotenv';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
 import { mkDirByPathSync, parseBoolean } from '../lib/utils';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
+import AppConfig from '../lib/AppConfig';
 
-dotenv.config();
+const appConfigs = AppConfig.getConfigs();
 
-const useXVFB = parseBoolean(process.env.XVFB);
-const screenWidth = parseInt(process.env.SCREEN_WIDTH || "1280");
-const screenHeight = parseInt(process.env.SCREEN_HEIGHT || "720");
+const useXVFB = appConfigs.XVFB;
+const screenWidth = appConfigs.SCREEN_WIDTH;
+const screenHeight = appConfigs.SCREEN_HEIGHT;
 const VIEWPORT = {width: screenWidth, height: screenHeight};
 
 const logger = new Logger('MonitorClient');
-logger.debug("configs:", {useXVFB, screenWidth, screenHeight});
 
 export default class MonitorClient {
     roomId: string;
@@ -97,10 +96,10 @@ export default class MonitorClient {
             throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);
         }
         return {
-            rtmp: replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
-                + path.join(options.appname, this.roomId),
-            flv: replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`),
-            hls: replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)
+            rtmp: new URL(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
+                + path.join(options.appname, this.roomId)).href,
+            flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
+            hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
         };
     }
 
@@ -178,8 +177,11 @@ export default class MonitorClient {
                     '--no-sandbox',
                     '--disable-infobars',
                     '--disable-setuid-sandbox',
+                    '--disable-web-security',
+                    '--disable-dev-shm-usage',
                     '--use-fake-ui-for-media-stream',
                     '--start-fullscreen',
+                    '--disk-cache-dir=./temp/browser-cache-disk',
                     '--display=' + this.screenNo
                 ]
             });

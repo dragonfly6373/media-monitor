@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
 import {createServer, IncomingMessage, ServerResponse} from 'http';
-// import process from 'process';
-
-// require('dotenv').config();
 import * as dotenv from 'dotenv';
 
 import RestController from './controller/RestController';
 import { IResponseData } from './controller/ResponseData';
 import Logger from './lib/Logger';
+import AppConfig from './lib/AppConfig';
 
 dotenv.config();
+// AppConfig.init();
+const appConfigs = AppConfig.getConfigs();
+
+Logger.config(appConfigs.LOGGER_CONFIGS);
 
 const logger = new Logger('Server');
 const domain: string = process.env.DOMAIN || "http://127.0.0.1";

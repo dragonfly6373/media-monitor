@@ -1,16 +1,16 @@
 import axios from 'axios';
-import * as dotenv from 'dotenv';
 
 import {IResponseData} from './ResponseData';
 import monitorController from '../monitor/MonitorController';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort } from '../lib/utils';
+import AppConfig from '../lib/AppConfig';
 
-dotenv.config();
+const appConfigs = AppConfig.getConfigs();
 const logger = new Logger('RestController');
 
 var INSTANCE: RestController | null = null;
-const RTMPServer = process.env.RTMP_SERVER;
+const RTMPServer = appConfigs.RTMP_SERVER;
 
 export default class RestController {
     constructor() {}
