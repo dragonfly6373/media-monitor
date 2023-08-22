@@ -43,6 +43,7 @@ class MonitorController {
             this.clientMap.delete(roomId);
             if (this.clientMap.size == 0) {
                 this.clientCounter = 0;
+                this.cleanResource();
             }
         } catch(error: any) {
             throw new Error("fail to stop browser client for room " + roomId + " with error" + error.message);

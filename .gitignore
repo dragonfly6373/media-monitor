@@ -2,3 +2,4 @@ node_modules/
 records/
 package-lock.json
 dist/
+temp/

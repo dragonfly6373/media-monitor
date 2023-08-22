@@ -1,3 +1,4 @@
+import process from 'process';
 import child_process from 'child_process';
 import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer';
@@ -7,11 +8,14 @@ import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
 import AppConfig from '../lib/AppConfig';
 
-const appConfigs = AppConfig.getConfigs();
+const {
+    XVFB: useXVFB,
+    SCREEN_WIDTH: screenWidth,
+    SCREEN_HEIGHT: screenHeight,
+    GOOGLE_CHROME_DISK_CACHE_DIR,
+    RECORD_OUTPUT_DIR
+} = AppConfig.getConfigs();
 
-const useXVFB = appConfigs.XVFB;
-const screenWidth = appConfigs.SCREEN_WIDTH;
-const screenHeight = appConfigs.SCREEN_HEIGHT;
 const VIEWPORT = {width: screenWidth, height: screenHeight};
 
 const logger = new Logger('MonitorClient');
@@ -40,28 +44,33 @@ export default class MonitorClient {
     }
 
     async reload(clientUrl?: string) {
-        let [page] = await this.browser?.pages() || [null];
-        if (!page) {
-            page = await this.browser?.newPage() as Page;
-            // page.waitForDevicePrompt().catch(logger.warn);
-            page.on('domcontentloaded', () => {
-                logger.debug("domcontentloaded");
-            });
-            page.on("load", () => logger.debug("page load"));
-        }
+        logger.info(`RoomID ${this.roomId} reload page`, this);
+        if (this.browser) {
+            let [page] = await this.browser?.pages() || [null];
+            if (!page) {
+                page = await this.browser?.newPage() as Page;
+                // page.waitForDevicePrompt().catch(logger.warn);
+                // page.on('domcontentloaded', () => {
+                //     logger.debug("domcontentloaded");
+                // });
+                // page.on("load", () => logger.debug("page load"));
+            }
 
-        if (clientUrl) {
-            await page.goto(clientUrl, { waitUntil: 'networkidle2' });
-            this._handlePage(page);
+            if (clientUrl) {
+                await page.goto(clientUrl, { waitUntil: 'networkidle2' });
+                this._handlePage(page);
+            } else {
+                page?.reload();
+            }
         } else {
-            page?.reload();
+            this.browser = await this._newBrowser(this.clientUrl);
         }
     }
 
     recStart() {
         logger.info(`RoomID ${this.roomId} start record`);
         try {
-            const filePath = `./records/${this.roomId}/${Date.now()}.mkv`;
+            const filePath = path.join(RECORD_OUTPUT_DIR, this.roomId, `${Date.now()}.mkv`);
             mkDirByPathSync(path.dirname(filePath));
             this.recProcess = this._streamTo(filePath);
         } catch(error: any) {
@@ -149,14 +158,16 @@ export default class MonitorClient {
     async _newScreen(): Promise<child_process.ChildProcessWithoutNullStreams> {
         try {
             logger.info(`RoomID ${this.roomId} Xvfb start newScreen`, this.screenNo, `${screenWidth}x${screenHeight}x24`);
-            let process = spawnProcess("Xvfb", [
+            process.env.DISPLAY = ":" + this.screenNo;
+            let p = spawnProcess("Xvfb", [
                 ":" + this.screenNo, "-ac",
                 "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
                 "-nocursor",
+                "-displayID", ":" + this.screenNo,
                 "-nolisten",
                 "tcp &"
             ], logger.info.bind(logger));
-            return process;
+            return p;
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} Failed to start Xvfb virtual screen with error ` + error.message);
         }
@@ -173,18 +184,28 @@ export default class MonitorClient {
                 headless: false, // we will use headful chrome
                 ignoreHTTPSErrors: true,
                 env: {DISPLAY: `:${this.screenNo}`},
+                ignoreDefaultArgs: ['--enable-automation'],
                 args: [
-                    '--no-sandbox',
+                    // '--no-sandbox',
                     '--disable-infobars',
-                    '--disable-setuid-sandbox',
+                    // '--disable-setuid-sandbox',
+                    '--disable-print-preview',
+                    '--disable-site-isolation-trials',
+                    '--disable-speech-api',
                     '--disable-web-security',
                     '--disable-dev-shm-usage',
+                    '--hide-scrollbars',
                     '--use-fake-ui-for-media-stream',
+                    '--allow-running-insecure-content',
                     '--start-fullscreen',
-                    '--disk-cache-dir=./temp/browser-cache-disk',
-                    '--display=' + this.screenNo
+                    '--disk-cache-dir=' + GOOGLE_CHROME_DISK_CACHE_DIR,'--disk-cache-size=33554432',
+                    '--display=:' + this.screenNo,
+                    `--window-size=${screenWidth},${screenHeight}`
                 ]
             });
+            const context = browser.defaultBrowserContext();
+            await context.overridePermissions('https://gomeetv3-dev.vnptit.vn', ['notifications']);
+            await context.overridePermissions('https://gomeetv3.vnptit.vn', ['notifications']);
             // let page: Page = await browser.newPage();
             let [page] = await browser.pages();
             page.setViewport(VIEWPORT);
