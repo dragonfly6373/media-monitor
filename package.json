@@ -9,6 +9,7 @@
     "build": "npm run clean && tsc --project tsconfig.json",
     "build:prod": "npm run clean && webpack",
     "start:prod": "node ./dist/server.js",
+    "build:docker-base": "docker build -f Dockerfile.base -t nguyendang2022/livestream-base:v1.0.1 .",
     "build:docker": "npm run build && docker build -t nguyendang2022/media-monitor:v1.0.1 .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

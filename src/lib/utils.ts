@@ -9,9 +9,11 @@ export const parseBoolean = (value?: string): boolean => {
     return false;
 }
 
-export const parseArray = (value?: string): [] => {
+export const parseArray = <T>(value?: string, sep: string = ",", parser?: Function): Array<T> => {
     if (value) {
-        return JSON.parse(value) as [];
+        let results = value.split(sep);
+        if (parser) return results.map(i => parser(i) as T);
+        return results as Array<T>;
     }
     return [];
 }
@@ -50,11 +52,6 @@ export function mkDirByPathSync(targetDir: string, { isRelativeToScript = false 
     }, initDir);
 }
 
-/**
- * Executes a shell command and return it as a Promise.
- * @param cmd {string}
- * @return {Promise<string>}
- */
 export function execShellCommand(cmd: string): Promise<any> {
     return new Promise((resolve, reject) => {
         child_process.exec(cmd, (error, stdout, stderr) => {
@@ -66,18 +63,13 @@ export function execShellCommand(cmd: string): Promise<any> {
     });
 }
 
-/**
- * spawn and manage process is running
- * p1 = spawnProcess("ffmpeg", ["-video_size", "1365x767", "-framerate", "30", "-f", "x11grab", "-i", ":1.0", "-f", "pulse", "-ac", "2", "-i", "default", "-f", "mpegts", "output03.mkv", "-y"], (data) => console.log(data.toString()));
- * p2 = spawnProcess("ping", ["10.70.123.13", "-i 10"], (data) => console.log(data.toString()))
-*/
-export function spawnProcess(cmd: string, options: Array<string>, callback: Function) {
+export function spawnProcess(cmd: string, options: Array<string>, stdcallback: Function): child_process.ChildProcessWithoutNullStreams {
     const child = child_process.spawn(cmd, options)
-    child.stdout.on('data', (data: any) => {callback.call(callback, cmd, "stdout", data?.toString())});
-    child.stderr.on('data', (data: any) => callback.call(callback, cmd, "stderr", data?.toString()));
-    child.on('exit', (data: any) => callback.call(callback, cmd, "exit", data?.toString()));
-    child.on('error', (data: any) => callback.call(callback, cmd, "error", data?.toString()));
-    child.on('message', (data: any) => callback.call(callback, cmd, "message", data?.toString()));
-    child.on('close', (data: any) => callback.call(callback, cmd, "close", data?.toString()));
+    child.stdout.on('data', (data: any) => stdcallback.call(stdcallback, cmd, "stdout", data?.toString()));
+    child.stderr.on('data', (data: any) => stdcallback.call(stdcallback, cmd, "stderr", data?.toString()));
+    // child.on('exit', (data: any) => callback.call(callback, cmd, "exit", data?.toString()));
+    // child.on('error', (data: any) => callback.call(callback, cmd, "error", data?.toString()));
+    // child.on('message', (data: any) => callback.call(callback, cmd, "message", data?.toString()));
+    // child.on('close', (data: any) => callback.call(callback, cmd, "close", data?.toString()));
     return child;
 }

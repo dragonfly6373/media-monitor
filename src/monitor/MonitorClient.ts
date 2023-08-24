@@ -4,6 +4,7 @@ import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
 import { mkDirByPathSync, parseBoolean } from '../lib/utils';
+import Xvfb from '../lib/Xvfb';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
 import AppConfig from '../lib/AppConfig';
@@ -12,7 +13,8 @@ const {
     XVFB: useXVFB,
     SCREEN_WIDTH: screenWidth,
     SCREEN_HEIGHT: screenHeight,
-    GOOGLE_CHROME_DISK_CACHE_DIR,
+    CHROME_DISK_CACHE_DIR,
+    CHROME_DISK_CACHE_SIZE,
     RECORD_OUTPUT_DIR
 } = AppConfig.getConfigs();
 
@@ -26,7 +28,7 @@ export default class MonitorClient {
     rtmpUrl: string = "";
     screenNo: number = 99;
 
-    xvfbProcess: any;
+    xvfbProcess: Xvfb | null = null;
     browser: Browser | null = null;
     rtmpProcess: any;
     recProcess: any;
@@ -39,12 +41,12 @@ export default class MonitorClient {
     async start(screenNo: number) {
         logger.info(`RoomID ${this.roomId} start new monitor client`, useXVFB ? "use Xvfb" : "");
         this.screenNo = screenNo;
-        if (useXVFB) this.xvfbProcess = await this._newScreen();
+        if (useXVFB) this.xvfbProcess = this._newScreen();
         this.browser = await this._newBrowser(this.clientUrl);
     }
 
     async reload(clientUrl?: string) {
-        logger.info(`RoomID ${this.roomId} reload page`, this);
+        logger.info(`RoomID ${this.roomId} reload page`);
         if (this.browser) {
             let [page] = await this.browser?.pages() || [null];
             if (!page) {
@@ -126,8 +128,15 @@ export default class MonitorClient {
         return true;
     }
 
+    /**
+     * FFMPEG create screen record
+     * Local run ok: ffmpeg -video_size 1365x767 -framerate 30 -f x11grab -i :101.0 -f pulse -ac 2 -i default -vcodec libx264 -f flv rtmp://10.70.123.13:1945/live/OQcqnbkDwZk2AnHuCuMplJ2P52a3hK0nZ2CfnQEWH1jLR7Nk -y
+     * Docker run ok: ffmpeg -video_size 1365x767 -framerate 25 -f x11grab -i :101.0 -vcodec libx264 -acodec aac -max_muxing_queue_size 99999 -preset veryfast -f flv rtmp://10.70.123.13:1945/live/OQcqnbkDwZk2AnHuCuMplJ2P52a3hK0nZ2CfnQEWH1jLR7Nk -y
+     * @param dest 
+     * @returns 
+     */
     _streamTo(dest: string) {
-        return spawnProcess("ffmpeg", [
+        /* let localargs = [
             '-video_size', `${screenWidth}x${screenHeight}`,
             '-framerate',  '30',
             '-f',          'x11grab',
@@ -136,10 +145,30 @@ export default class MonitorClient {
             '-ac',         '2',
             '-i',          'default',
             '-vcodec',     'libx264',
-            '-fps_mode',   'vfr',
+            // '-fps_mode',   'vfr',
             '-f',          'flv',
             dest,  '-y'
-        ], logger.info.bind(logger));
+        ]; */
+        let args = [
+            '-video_size',            `${screenWidth}x${screenHeight}`,
+            '-framerate',             '25',
+            '-f',                     'x11grab',
+            '-i',                     `:${this.screenNo}.0`,
+            '-i',                     '-draw_mouse', '0',
+            '-vcodec',                'libx264',
+            '-acodec',                'aac',
+            '-max_muxing_queue_size', '99999',
+            '-preset',                'veryfast',
+            '-f',                     'flv',
+            dest,                     '-y'
+        ];          
+        let p = spawnProcess("ffmpeg", args, (data: any) => {
+            process.stderr.write(data);
+        });
+        p.on("error", (data) => logger.info("error", data));
+        p.on("close", (data) => logger.info("close", data));
+        p.on("exit", (data) => logger.info("exit", data));
+        return p;
     }
 
     async stop() {
@@ -148,25 +177,36 @@ export default class MonitorClient {
             if (this.rtmpProcess) this.rtmpProcess.kill();
             if (this.recProcess) this.recProcess.kill();
             await this.browser?.close().catch(logger.warn);
-            if (useXVFB) await this.xvfbProcess.kill();
+            if (useXVFB) this.xvfbProcess?.stop(() => {});
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} can't close client browser with error: ${error.message}`);
         }
     }
 
     // Attempt to launch Xvfb
-    async _newScreen(): Promise<child_process.ChildProcessWithoutNullStreams> {
+    // async _newScreen(): Promise<child_process.ChildProcessWithoutNullStreams> {
+    _newScreen(): Xvfb {
         try {
             logger.info(`RoomID ${this.roomId} Xvfb start newScreen`, this.screenNo, `${screenWidth}x${screenHeight}x24`);
             process.env.DISPLAY = ":" + this.screenNo;
-            let p = spawnProcess("Xvfb", [
+            /* let p = spawnProcess("Xvfb", [
                 ":" + this.screenNo, "-ac",
                 "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
                 "-nocursor",
-                "-displayID", ":" + this.screenNo,
-                "-nolisten",
-                "tcp &"
+                "-displayID", ":" + this.screenNo
+                // "-nolisten", "tcp &"
             ], logger.info.bind(logger));
+            return p; */
+            let p = new Xvfb({
+                displayNo: this.screenNo,
+                xvfb_args: [
+                    "-ac",
+                    "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
+                    "-nocursor",
+                    "-displayID", ":" + this.screenNo
+                ]
+            });
+            p.startSync();
             return p;
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} Failed to start Xvfb virtual screen with error ` + error.message);
@@ -186,9 +226,9 @@ export default class MonitorClient {
                 env: {DISPLAY: `:${this.screenNo}`},
                 ignoreDefaultArgs: ['--enable-automation'],
                 args: [
-                    // '--no-sandbox',
+                    '--no-sandbox', // Stability and security will suffer
                     '--disable-infobars',
-                    // '--disable-setuid-sandbox',
+                    // '--disable-setuid-sandbox', // Stability and security will suffer
                     '--disable-print-preview',
                     '--disable-site-isolation-trials',
                     '--disable-speech-api',
@@ -198,14 +238,17 @@ export default class MonitorClient {
                     '--use-fake-ui-for-media-stream',
                     '--allow-running-insecure-content',
                     '--start-fullscreen',
-                    '--disk-cache-dir=' + GOOGLE_CHROME_DISK_CACHE_DIR,'--disk-cache-size=33554432',
+                    '--disk-cache-dir=' + CHROME_DISK_CACHE_DIR,
+                    '--disk-cache-size=' + CHROME_DISK_CACHE_SIZE,
                     '--display=:' + this.screenNo,
                     `--window-size=${screenWidth},${screenHeight}`
                 ]
             });
             const context = browser.defaultBrowserContext();
-            await context.overridePermissions('https://gomeetv3-dev.vnptit.vn', ['notifications']);
-            await context.overridePermissions('https://gomeetv3.vnptit.vn', ['notifications']);
+            [
+                'https://gomeetv3-dev.vnptit.vn',
+                'https://gomeetv3.vnptit.vn'
+            ].forEach((domain) => context.overridePermissions(domain, ['notifications']));
             // let page: Page = await browser.newPage();
             let [page] = await browser.pages();
             page.setViewport(VIEWPORT);
@@ -239,16 +282,16 @@ export default class MonitorClient {
                 .then(() => {
                     page.$eval("#join-audio-btn", (el: any) => {
                         el?.click();
-                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
             page.waitForSelector("#btnFullScreen")
                 .then(() => {
                     page.$eval("#btnFullScreen", (el: any) => {
                         el?.click();
-                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
         } catch (error: any) {
             logger.warn(`RoomID ${this.roomId} fail to assert page element with error:`, error.message);
         }

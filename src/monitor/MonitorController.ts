@@ -1,12 +1,14 @@
 import Logger from "../lib/Logger";
 import MonitorClient from "./MonitorClient";
 import { execShellCommand } from "../lib/utils";
+import AppConfig from "../lib/AppConfig";
 
 const logger = new Logger('MonitorController');
+const { XVFB_DISPLAY_START_NUM } = AppConfig.getConfigs();
 
 class MonitorController {
     clientMap: Map<string, MonitorClient> = new Map();
-    clientCounter: number = 100;
+    clientCounter: number = XVFB_DISPLAY_START_NUM;
 
     constructor() {}
 
@@ -28,9 +30,9 @@ class MonitorController {
         return this.clientMap.get(roomId);
     }
 
-    async reload(roomId: string) {
+    async reload(roomId: string, clientUrl: string) {
         let client = this.clientMap.get(roomId) as MonitorClient;
-        client?.reload();
+        client?.reload(clientUrl);
     }
 
     async stopClient(roomId: string) {
@@ -57,12 +59,16 @@ class MonitorController {
             .then(() => {
                 logger.info(" > kill all ffmpeg process");
             })
-            .catch((error: any) => logger.warn("fail to kill all ffmpeg process with error", error.message));
+            .catch((error: any) => {
+                // logger.warn("fail to kill all ffmpeg process with error", error.message);
+            });
         execShellCommand("pkill -9 Xvfb")
             .then(() => {
                 logger.info(" > kill all Xvfb process");
             })
-            .catch((error: any) => logger.warn("fail to kill all Xvfb process with error", error.message));
+            .catch((error: any) => {
+                // logger.warn("fail to kill all Xvfb process with error", error.message);
+            });
     }
 }
 

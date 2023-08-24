@@ -8,9 +8,11 @@ export default class AppConfig {
     PORT: number = 8090;
 
     XVFB: boolean = true;
+    XVFB_DISPLAY_START_NUM: number = 100;
     SCREEN_WIDTH: number = 1365;
     SCREEN_HEIGHT: number = 767;
-    GOOGLE_CHROME_DISK_CACHE_DIR: string = "";
+    CHROME_DISK_CACHE_DIR: string = "";
+    CHROME_DISK_CACHE_SIZE: number = 33554432; // 32 * 1024 * 1024
 
     RTMP_SERVER: string = "http://10.70.123.13:8890";
     RTMP_UPSTREAM: string = "rtmp://10.70.123.13:1945";
@@ -28,9 +30,11 @@ export default class AppConfig {
         DOMAIN: string,
         PORT: number,
         XVFB: boolean,
+        XVFB_DISPLAY_START_NUM: number,
         SCREEN_WIDTH: number,
         SCREEN_HEIGHT: number,
-        GOOGLE_CHROME_DISK_CACHE_DIR: string,
+        CHROME_DISK_CACHE_DIR: string,
+        CHROME_DISK_CACHE_SIZE: number,
         RTMP_SERVER: string,
         RECORD_OUTPUT_DIR: string,
         LOGGER_LEVEL: number,
@@ -41,9 +45,11 @@ export default class AppConfig {
         this.DOMAIN = DOMAIN;
         this.PORT = PORT;
         this.XVFB = XVFB;
+        this.XVFB_DISPLAY_START_NUM = XVFB_DISPLAY_START_NUM;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
-        this.GOOGLE_CHROME_DISK_CACHE_DIR = GOOGLE_CHROME_DISK_CACHE_DIR;
+        this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
+        this.CHROME_DISK_CACHE_SIZE = CHROME_DISK_CACHE_SIZE;
         this.RTMP_SERVER = RTMP_SERVER;
         // this.RTMP_UPSTREAM = RTMP_UPSTREAM;
         this.RECORD_OUTPUT_DIR = RECORD_OUTPUT_DIR;
@@ -54,7 +60,6 @@ export default class AppConfig {
             timeIncluded: LOGGER_TIME_INCLUDED
         };
     }
-
 
     static INSTANCE: AppConfig;
 
@@ -68,9 +73,11 @@ export default class AppConfig {
             process.env.DOMAIN || "",
             parseInt(process.env.PORT || "8090"),
             parseBoolean(process.env.XVFB || "false"),
+            parseInt(process.env.XVFB_DISPLAY_START_NUM || "100"),
             parseInt(process.env.SCREEN_WIDTH || "1920"),
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
-            process.env.GOOGLE_CHROME_DISK_CACHE_DIR || "",
+            process.env.CHROME_DISK_CACHE_DIR || "",
+            parseInt(process.env.CHROME_DISK_CACHE_SIZE || "33554432"),
             process.env.RTMP_SERVER || "",
             process.env.RECORD_OUTPUT_DIR || "",
             parseInt(process.env.LOGGER_LEVEL || "4"),

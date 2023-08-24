@@ -73,22 +73,13 @@ export default class RestController {
                 resData.data = true
                 break;
             }
-            case '/update': {
-                let roomId: string = params.get("roomId") || "";
-                let clientUrl: string = params.get("clientUrl") || "";
-                if (!roomId || !clientUrl) throw new Error("Invalid input. Required params: roomId, clientUrl");
-                // TODO: implement update livestream clientUrl by roomId
-                logger.info("update", {roomId});
-                resData.data = true;
-                break;
-            }
             case '/reload': {
                 let roomId: string = params.get("roomId") || "";
                 let clientUrl: string = params.get("clientUrl") || "";
                 if (!roomId) throw new Error("Invalid input. Params: roomId (required), clientUrl (optional)");
                 // TODO: implement update livestream clientUrl by roomId
                 logger.info("reload", {roomId, clientUrl});
-                monitorController.reload(roomId);
+                monitorController.reload(roomId, clientUrl);
                 resData.data = true;
                 break;
             }
