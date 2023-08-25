@@ -54,7 +54,7 @@ class MonitorController {
 
     async cleanResource() {
         logger.info("all client closed. clean all resource");
-        this.clientCounter = 100;
+        this.clientCounter = XVFB_DISPLAY_START_NUM;
         execShellCommand("pkill -9 ffmpeg")
             .then(() => {
                 logger.info(" > kill all ffmpeg process");

@@ -150,24 +150,25 @@ export default class MonitorClient {
             dest,  '-y'
         ]; */
         let args = [
-            '-video_size',            `${screenWidth}x${screenHeight}`,
+            '-video_size',            `${screenWidth}x${screenHeight - 56}`,
             '-framerate',             '25',
             '-f',                     'x11grab',
-            '-i',                     `:${this.screenNo}.0`,
-            '-i',                     '-draw_mouse', '0',
+            '-draw_mouse',            '0',
+            '-i',                     `:${this.screenNo}.0+0,56`,
             '-vcodec',                'libx264',
             '-acodec',                'aac',
             '-max_muxing_queue_size', '99999',
             '-preset',                'veryfast',
             '-f',                     'flv',
             dest,                     '-y'
-        ];          
+        ];
+        logger.info(`RoomID ${this.roomId} - ffmpeg start`, args.join(" "));
         let p = spawnProcess("ffmpeg", args, (data: any) => {
             process.stderr.write(data);
         });
-        p.on("error", (data) => logger.info("error", data));
-        p.on("close", (data) => logger.info("close", data));
-        p.on("exit", (data) => logger.info("exit", data));
+        p.on("error", (data) => logger.info("ffmpeg error", data));
+        p.on("close", (data) => logger.info("ffmpeg close", data));
+        p.on("exit", (data) => logger.info("ffmpeg exit", data));
         return p;
     }
 
@@ -199,6 +200,8 @@ export default class MonitorClient {
             return p; */
             let p = new Xvfb({
                 displayNo: this.screenNo,
+                reuse: true,
+                timeout: 10000,
                 xvfb_args: [
                     "-ac",
                     "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
@@ -271,27 +274,29 @@ export default class MonitorClient {
     _handlePage(page?: Page | null) {
         if (!page) return;
         try {
-            page.waitForSelector("#register-btn")
+            /* page.waitForSelector("#register-btn")
                 .then(() => {
                     page.$eval("#register-btn", (el: any) => {
                         el?.click();
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error)); */
             page.waitForSelector("#join-audio-btn")
                 .then(() => {
                     page.$eval("#join-audio-btn", (el: any) => {
                         el?.click();
+                        logger.debug("handle click #join-audio-btn");
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
+                .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
             page.waitForSelector("#btnFullScreen")
                 .then(() => {
                     page.$eval("#btnFullScreen", (el: any) => {
                         el?.click();
-                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
+                        logger.debug("handle click #btnFullScreen");
+                    }).catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
+                .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
         } catch (error: any) {
             logger.warn(`RoomID ${this.roomId} fail to assert page element with error:`, error.message);
         }

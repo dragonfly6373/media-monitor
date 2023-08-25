@@ -15,7 +15,7 @@ export default class Xvfb {
     _display: string;
     _oldDisplay: string = "";
     _reuse: boolean;
-    _timeout: number = 1000;
+    _timeout: number = 3000;
     _silent: boolean = true;
     _xvfb_args: Array<string> = [];
     _process: any;
@@ -24,7 +24,7 @@ export default class Xvfb {
         options = options || {};
         this._display = ":" + options.displayNo;
         this._reuse = options.reuse;
-        this._timeout = options.timeout || 500;
+        this._timeout = options.timeout || 3000;
         this._silent = options.silent;
         this._xvfb_args = options.xvfb_args || [];
     }
