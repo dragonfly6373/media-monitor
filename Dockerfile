@@ -35,11 +35,16 @@ COPY package.json package-lock.json .env ./
 RUN npm install --production
 
 COPY ./dist ./dist
-
-# Start Service
 # CMD npm run start:prod
 COPY run.sh ./
 RUN chmod a+x ./run.sh
+RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor
+RUN usermod -aG pulse,pulse-access
+RUN pulseaudio -D
+
+USER monitor
+
+# Start Service
 ENTRYPOINT ["/bin/bash","-c","/var/www/media-monitor/run.sh"]
 
 EXPOSE 8090

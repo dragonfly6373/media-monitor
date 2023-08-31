@@ -23,7 +23,7 @@ RUN echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >
 
 #  --no-install-recommends
 RUN apt-get -y update && apt-get -y full-upgrade \
-    && apt-get install -y ffmpeg xvfb google-chrome-stable \
+    && apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils google-chrome-stable \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /src/*.deb
 

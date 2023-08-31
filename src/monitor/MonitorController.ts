@@ -2,6 +2,9 @@ import Logger from "../lib/Logger";
 import MonitorClient from "./MonitorClient";
 import { execShellCommand } from "../lib/utils";
 import AppConfig from "../lib/AppConfig";
+import Xvfb from "../lib/Xvfb";
+import { PulseAudio } from "../lib/PulseAudio";
+import Ffmpeg from "../lib/Ffmpeg";
 
 const logger = new Logger('MonitorController');
 const { XVFB_DISPLAY_START_NUM } = AppConfig.getConfigs();
@@ -55,20 +58,9 @@ class MonitorController {
     async cleanResource() {
         logger.info("all client closed. clean all resource");
         this.clientCounter = XVFB_DISPLAY_START_NUM;
-        execShellCommand("pkill -9 ffmpeg")
-            .then(() => {
-                logger.info(" > kill all ffmpeg process");
-            })
-            .catch((error: any) => {
-                // logger.warn("fail to kill all ffmpeg process with error", error.message);
-            });
-        execShellCommand("pkill -9 Xvfb")
-            .then(() => {
-                logger.info(" > kill all Xvfb process");
-            })
-            .catch((error: any) => {
-                // logger.warn("fail to kill all Xvfb process with error", error.message);
-            });
+        Ffmpeg.killAll();
+        Xvfb.killAll();
+        PulseAudio.killAll();
     }
 }
 

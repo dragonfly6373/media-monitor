@@ -1,5 +1,4 @@
 import process from 'process';
-import child_process from 'child_process';
 import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
@@ -8,9 +7,11 @@ import Xvfb from '../lib/Xvfb';
 import Logger from '../lib/Logger';
 import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
 import AppConfig from '../lib/AppConfig';
+import { PulseAudio } from '../lib/PulseAudio';
+import Ffmpeg from '../lib/Ffmpeg';
 
 const {
-    XVFB: useXVFB,
+    // XVFB: useXVFB,
     SCREEN_WIDTH: screenWidth,
     SCREEN_HEIGHT: screenHeight,
     CHROME_DISK_CACHE_DIR,
@@ -28,10 +29,11 @@ export default class MonitorClient {
     rtmpUrl: string = "";
     screenNo: number = 99;
 
-    xvfbProcess: Xvfb | null = null;
+    xvfbProcess: any;
+    pulseProcess: PulseAudio | any = null;
     browser: Browser | null = null;
-    rtmpProcess: any;
-    recProcess: any;
+    rtmpProcess: Ffmpeg | null = null;
+    recProcess: Ffmpeg | null = null;
 
     constructor(roomId: string, clientUrl: string) {
         this.roomId = roomId;
@@ -39,10 +41,18 @@ export default class MonitorClient {
     }
 
     async start(screenNo: number) {
-        logger.info(`RoomID ${this.roomId} start new monitor client`, useXVFB ? "use Xvfb" : "");
+        logger.info(`RoomID ${this.roomId} start new monitor client`);
         this.screenNo = screenNo;
-        if (useXVFB) this.xvfbProcess = this._newScreen();
-        this.browser = await this._newBrowser(this.clientUrl);
+        this.pulseProcess = new PulseAudio(screenNo);
+        this.pulseProcess.start((error: any, data: any) => {
+            if (error) logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
+            else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
+        });
+        this.xvfbProcess = this._newScreen();
+        this.browser = await this._newBrowser(this.clientUrl, {
+            xvfb: this.xvfbProcess,
+            pulseAudio: this.pulseProcess
+        });
     }
 
     async reload(clientUrl?: string) {
@@ -65,7 +75,10 @@ export default class MonitorClient {
                 page?.reload();
             }
         } else {
-            this.browser = await this._newBrowser(this.clientUrl);
+            this.browser = await this._newBrowser(this.clientUrl, {
+                xvfb: this.xvfbProcess,
+                pulseAudio: this.pulseProcess
+            });
         }
     }
 
@@ -74,7 +87,10 @@ export default class MonitorClient {
         try {
             const filePath = path.join(RECORD_OUTPUT_DIR, this.roomId, `${Date.now()}.mkv`);
             mkDirByPathSync(path.dirname(filePath));
-            this.recProcess = this._streamTo(filePath);
+            if (!this.recProcess) {
+                this.recProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
+            }
+            this.recProcess.streamTo(filePath);
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} record fail with error:`, error);
             return false;
@@ -100,18 +116,21 @@ export default class MonitorClient {
         this.rtmpUrl = path.join(rtmpServer, options.appname, options.channelkey);
         // ffmpeg -video_size 1365x767 -framerate 30 -f x11grab -i :1.0 -f pulse -ac 2 -i default -vcodec libx264 -f flv ${rtmpUrl} -y
         try {
-            this.rtmpProcess = this._streamTo(this.rtmpUrl);
+            if (!this.rtmpProcess) {
+                this.rtmpProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
+            }
+            this.rtmpProcess.streamTo(this.rtmpUrl);
             logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`, options);
+            return {
+                rtmp: new URL(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
+                    + path.join(options.appname, this.roomId)).href,
+                // flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
+                // hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
+            };
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
             throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);
         }
-        return {
-            rtmp: new URL(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
-                + path.join(options.appname, this.roomId)).href,
-            flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
-            hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
-        };
     }
 
     restartStream() {
@@ -120,56 +139,14 @@ export default class MonitorClient {
                 this.rtmpProcess.kill();
                 this.rtmpProcess = null;
             }
-            this.rtmpProcess = this._streamTo(this.rtmpUrl);
+            if (!this.rtmpProcess) this.rtmpProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
+            this.rtmpProcess.streamTo(this.rtmpUrl);
+            // this._streamTo(this.rtmpUrl);
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
             throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);
         }
         return true;
-    }
-
-    /**
-     * FFMPEG create screen record
-     * Local run ok: ffmpeg -video_size 1365x767 -framerate 30 -f x11grab -i :101.0 -f pulse -ac 2 -i default -vcodec libx264 -f flv rtmp://10.70.123.13:1945/live/OQcqnbkDwZk2AnHuCuMplJ2P52a3hK0nZ2CfnQEWH1jLR7Nk -y
-     * Docker run ok: ffmpeg -video_size 1365x767 -framerate 25 -f x11grab -i :101.0 -vcodec libx264 -acodec aac -max_muxing_queue_size 99999 -preset veryfast -f flv rtmp://10.70.123.13:1945/live/OQcqnbkDwZk2AnHuCuMplJ2P52a3hK0nZ2CfnQEWH1jLR7Nk -y
-     * @param dest 
-     * @returns 
-     */
-    _streamTo(dest: string) {
-        /* let localargs = [
-            '-video_size', `${screenWidth}x${screenHeight}`,
-            '-framerate',  '30',
-            '-f',          'x11grab',
-            '-i',          `:${this.screenNo}.0`,
-            '-f',          'pulse',
-            '-ac',         '2',
-            '-i',          'default',
-            '-vcodec',     'libx264',
-            // '-fps_mode',   'vfr',
-            '-f',          'flv',
-            dest,  '-y'
-        ]; */
-        let args = [
-            '-video_size',            `${screenWidth}x${screenHeight - 56}`,
-            '-framerate',             '25',
-            '-f',                     'x11grab',
-            '-draw_mouse',            '0',
-            '-i',                     `:${this.screenNo}.0+0,56`,
-            '-vcodec',                'libx264',
-            '-acodec',                'aac',
-            '-max_muxing_queue_size', '99999',
-            '-preset',                'veryfast',
-            '-f',                     'flv',
-            dest,                     '-y'
-        ];
-        logger.info(`RoomID ${this.roomId} - ffmpeg start`, args.join(" "));
-        let p = spawnProcess("ffmpeg", args, (data: any) => {
-            process.stderr.write(data);
-        });
-        p.on("error", (data) => logger.info("ffmpeg error", data));
-        p.on("close", (data) => logger.info("ffmpeg close", data));
-        p.on("exit", (data) => logger.info("ffmpeg exit", data));
-        return p;
     }
 
     async stop() {
@@ -178,7 +155,8 @@ export default class MonitorClient {
             if (this.rtmpProcess) this.rtmpProcess.kill();
             if (this.recProcess) this.recProcess.kill();
             await this.browser?.close().catch(logger.warn);
-            if (useXVFB) this.xvfbProcess?.stop(() => {});
+            this.xvfbProcess?.stop(() => {});
+            this.pulseProcess?.stop(() => {});
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} can't close client browser with error: ${error.message}`);
         }
@@ -189,7 +167,7 @@ export default class MonitorClient {
     _newScreen(): Xvfb {
         try {
             logger.info(`RoomID ${this.roomId} Xvfb start newScreen`, this.screenNo, `${screenWidth}x${screenHeight}x24`);
-            process.env.DISPLAY = ":" + this.screenNo;
+            this.pulseProcess?.setSinkEnvVariable();
             /* let p = spawnProcess("Xvfb", [
                 ":" + this.screenNo, "-ac",
                 "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
@@ -205,18 +183,20 @@ export default class MonitorClient {
                 xvfb_args: [
                     "-ac",
                     "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
+                    // "&", "pulseaudio",
                     "-nocursor",
                     "-displayID", ":" + this.screenNo
                 ]
             });
             p.startSync();
+            this.pulseProcess?.restoreSinkEnvVariable();
             return p;
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} Failed to start Xvfb virtual screen with error ` + error.message);
         }
     }
 
-    async _newBrowser(clientUrl: string): Promise<Browser> {
+    async _newBrowser(clientUrl: string, options: {xvfb: any, pulseAudio: any}): Promise<Browser> {
         let browser: Browser | null = null;
         logger.info(`RoomID ${this.roomId} new browser client on screen: ${this.screenNo}`);
     
@@ -226,7 +206,10 @@ export default class MonitorClient {
                 executablePath: 'google-chrome',
                 headless: false, // we will use headful chrome
                 ignoreHTTPSErrors: true,
-                env: {DISPLAY: `:${this.screenNo}`},
+                env: {
+                    DISPLAY: options.xvfb.display(),
+                    PULSE_SINK: options.pulseAudio.sinkId
+                },
                 ignoreDefaultArgs: ['--enable-automation'],
                 args: [
                     '--no-sandbox', // Stability and security will suffer
@@ -243,8 +226,9 @@ export default class MonitorClient {
                     '--start-fullscreen',
                     '--disk-cache-dir=' + CHROME_DISK_CACHE_DIR,
                     '--disk-cache-size=' + CHROME_DISK_CACHE_SIZE,
-                    '--display=:' + this.screenNo,
-                    `--window-size=${screenWidth},${screenHeight}`
+                    '--display=' + options.xvfb.display(),
+                    `--window-size=${screenWidth},${screenHeight}`,
+                    `--alsa-output-device=hw:${this.screenNo},0`
                 ]
             });
             const context = browser.defaultBrowserContext();
@@ -256,12 +240,12 @@ export default class MonitorClient {
             let [page] = await browser.pages();
             page.setViewport(VIEWPORT);
             // page.waitForDevicePrompt().catch(logger.warn);
+            await page.goto(clientUrl, { waitUntil: 'networkidle2' });
             page.on("domcontentloaded", () => logger.debug("domcontentloaded"));
             page.on("load", () => {
                 logger.debug("page loaded");
                 this._handlePage(page);
             });
-            await page.goto(clientUrl, { waitUntil: 'networkidle2' });
             this._handlePage(page);
         } catch (error: any) {
             // return callback(error);
@@ -274,19 +258,19 @@ export default class MonitorClient {
     _handlePage(page?: Page | null) {
         if (!page) return;
         try {
-            /* page.waitForSelector("#register-btn")
+            page.waitForSelector(".ytp-play-button")
                 .then(() => {
-                    page.$eval("#register-btn", (el: any) => {
+                    page.$eval(".ytp-play-button", (el: any) => {
                         el?.click();
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error)); */
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
             page.waitForSelector("#join-audio-btn")
                 .then(() => {
                     page.$eval("#join-audio-btn", (el: any) => {
                         el?.click();
                         logger.debug("handle click #join-audio-btn");
-                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error.message));
+                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} click element error`, error.message));
                 })
                 .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
             page.waitForSelector("#btnFullScreen")
@@ -294,11 +278,11 @@ export default class MonitorClient {
                     page.$eval("#btnFullScreen", (el: any) => {
                         el?.click();
                         logger.debug("handle click #btnFullScreen");
-                    }).catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
+                    }).catch((error: any) => {logger.warn(`RoomID ${this.roomId} click element error`, error.message)});
                 })
                 .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
         } catch (error: any) {
-            logger.warn(`RoomID ${this.roomId} fail to assert page element with error:`, error.message);
+            logger.warn(`RoomID ${this.roomId} fail to handle page element with error:`, error.message);
         }
     }
 }

@@ -44,7 +44,7 @@ export default class Xvfb {
             try {
                 this._spawnProcess((e: any) => {
                     didSpawnFail = true;
-                    if (cb) cb(e);
+                    if (cb) cb(null, e);
                 });
             } catch (e) {
                 return cb && cb(e);
@@ -171,7 +171,7 @@ export default class Xvfb {
         let display = this.display();
 
         let args = [display].concat(this._xvfb_args);
-        logger.info("spawnProcess Xvfb", args);
+        logger.info("spawnProcess ", ["Xvfb", ...args].join(" "));
         this._process = spawnProcess('Xvfb', args, (data: any) => {
             if (!this._silent) {
                 process.stderr.write(data);
@@ -199,6 +199,16 @@ export default class Xvfb {
 
     async _isScreenUsed(): Promise<boolean> {
         return await Xvfb.isScreenUsed(this.display());
+    }
+
+    static killAll() {
+        execShellCommand("pkill -9 Xvfb")
+            .then(() => {
+                logger.info(" > kill all Xvfb process");
+            })
+            .catch((error: any) => {
+                // logger.warn("fail to kill all Xvfb process with error", error.message);
+            });
     }
 }
 
