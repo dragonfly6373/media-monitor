@@ -39,7 +39,7 @@ COPY ./dist ./dist
 COPY run.sh ./
 RUN chmod a+x ./run.sh
 RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor
-RUN usermod -aG pulse,pulse-access
+RUN usermod -aG pulse,pulse-access monitor
 RUN pulseaudio -D
 
 USER monitor
