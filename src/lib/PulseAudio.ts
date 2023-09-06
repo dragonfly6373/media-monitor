@@ -27,8 +27,15 @@ export class PulseAudio {
         this._process = await execShellCommand(["pactl", ...options].join(" "));
         // for ALSA: use alsamixer
         // for Pulseaudio: use pacmd set-sink-mute n 0 where n is the sink index (likely 0)
+        this.unMute();
         if (cb) cb(null, this._process);
         return this;
+    }
+
+    async unMute(): Promise<void> {
+        this.setSinkEnvVariable();
+        await execShellCommand(`pactl set-sink-mute ${this._sink_id} 0`);
+        this.restoreSinkEnvVariable();
     }
 
     stop(cb: Function) {
