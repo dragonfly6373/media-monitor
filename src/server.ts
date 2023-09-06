@@ -7,6 +7,9 @@ import RestController from './controller/RestController';
 import { IResponseData } from './controller/ResponseData';
 import Logger from './lib/Logger';
 import AppConfig from './lib/AppConfig';
+import Ffmpeg from './lib/Ffmpeg';
+import Xvfb from './lib/Xvfb';
+import { PulseAudio } from './lib/PulseAudio';
 
 dotenv.config();
 // AppConfig.init();
@@ -50,9 +53,19 @@ server.listen(serverPort, () => {
 });
 
 const exitHandler = (options: any, exitCode: number) => {
-    if (options.cleanup) logger.info('clean');
-    if (exitCode || exitCode === 0) console.log(exitCode);
-    if (options.exit) process.exit();
+    try {
+        if (options.cleanup) {
+            logger.info('clean');
+            Xvfb.killAll();
+            Ffmpeg.killAll();
+            PulseAudio.killAll();
+        }
+    } catch(error: any) {
+        logger.error("kill all child processes failed with error", error.message);
+    } finally {
+        if (exitCode || exitCode === 0) console.log(exitCode);
+        if (options.exit) process.exit();
+    }
 }
 
 //do something when app is closing

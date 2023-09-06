@@ -29,6 +29,16 @@
   }
 }
 ```
+
+**Create Client from clientUrl and get RMTP Link:**
+> curl --location 'http://localhost:8090/live?roomId=demo&clientUrl=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Db1kbLwvqugk&rtmpServer=http%3A%2F%2F10.70.123.13%3A8890'
+
+**Reload Client If any error occur:**
+> curl --location 'http://localhost:8090/reload?roomId=demo&clientUrl=https%3A%2F%2Fgomeetv3-dev.vnptit.vn%2Froom%3FsessionToken%3DBfN7nuQFQiSNDH3xia22kPEttgYDmMn7'
+
+**Stop Monitor Client:**
+> curl --location 'http://localhost:8090/stop?roomId=demo'
+
 ## Build Docker:
 > npm run build:docker
 
@@ -67,17 +77,19 @@ LOGGER_OUTPUT=/var/log/gomeet-v3/monitor
 LOGGER_TIME_INCLUDED=true
 ```
 ## Server
-File: ./src/server.ts
-Descriptions:
+**File:** ./src/server.ts
+
+**Descriptions:**
 * Create pure http server.
 * Handle request, get request method, request pathname, request searchParams
 
 ## Rest Controller
-File: ./src/controller/RestController.ts
-Handle routing and execute client's request by method, pathname, and searchParams
+**File:** ./src/controller/RestController.ts
+
+**Descriptions:** Handle routing and execute client's request by method, pathname, and searchParams
 Handle request path:
 
-### Pathname '/create':
+### 1. '/live':
 Create new Xvfb Display, open puppeteer - google chrome, join web client to room, Ffmpeg capture entire screen and send mediastream to RTMP server.
 
 **Params:**
@@ -86,9 +98,9 @@ Create new Xvfb Display, open puppeteer - google chrome, join web client to room
 * **rtmpServer**: string (required)
 
 **Return:**
-* **result**: {rtmp: string}
+* **success**: boolean
 
-### Pathname '/restart'
+### 2. '/restart'
 Kill and re-create Ffmpeg media stream to RTMP Server
 
 **Params:**
@@ -97,7 +109,7 @@ Kill and re-create Ffmpeg media stream to RTMP Server
 **Return:**
 * **success**: boolean
 
-### Pathname '/reload'
+### 3. '/reload'
 Reload client URL (does not kill streaming process)
 
 **Params:**
@@ -107,20 +119,20 @@ Reload client URL (does not kill streaming process)
 **Return:**
 * **success**: boolean
 
-### Pathname '/stop'
+### 4. '/stop'
 **Params:**
 * **roomId**: string (required)
 
 **Return:**
 * **success**: boolean
 
-### Pathname '/recStart'
+### 5. '/recStart'
 **Params:**
 * **roomId**: string (required)
 
 **Return:**
 * **success**: boolean
-### Pathname '/recPause'
+### 6. '/recPause'
 **Params:**
 * **roomId**: string (required)
 
@@ -133,48 +145,103 @@ Reload client URL (does not kill streaming process)
 * **clientCounter**: number = XVFB_DISPLAY_START_NUM
 
 **Methods:**
-* **constructor()**
-* **nextScreenNumber()**: number
-* **async createClient(roomId: string, clientUrl: string)**: Promise<MonitorClient>
-* **getClient(roomId: string)**: MonitorClient | undefined
-* **async reload(roomId: string, clientUrl: string)**: void
-* **async stopClient(roomId: string)**: void
-* **async cleanResource()**: void
+1. **constructor()**
+2. **nextScreenNumber()**: number
+3. async **createClient(roomId: string, clientUrl: string)**: Promise<MonitorClient>
+4. **getClient(roomId: string)**: MonitorClient | undefined
+5. async **reload(roomId: string, clientUrl: string)**: void
+6. async **stopClient(roomId: string)**: void
+7. async **cleanResource()**: void
+
+## MonitorClient:
+**Properties:**
+1. **roomId**: string
+2. **clientUrl**: string
+3. **rtmpUrl**: string = ""
+4. **screenNo**: number = 99
+5. **xvfbProcess**: any
+6. **pulseProcess**: PulseAudio | any = null
+7. **browser**: Browser | null = null
+8. **rtmpProcess**: Ffmpeg | null = null
+9. **recProcess**: Ffmpeg | null = null
+
+**Method:**
+1. **constructor**(roomId: string, clientUrl: string)
+2. async **start**(screenNo: number)
+3. async **reload**(clientUrl?: string)
+4. **recStart**()
+5. **recPause**()
+6. **upStream**(rtmpServer: string)
+7. **restartStream**()
+8. async **stop**()
+9. **_newScreen**(): Xvfb
+10. async _**newBrowser**(clientUrl: string, options: {xvfb: any, pulseAudio: any}): Promise<Browser>
+11. _**handlePage**(page?: Page | null)
 
 ## Libraries
 ### XVFB
 **Properties:**
+1. **_display**: string = ""
+2. **_oldDisplay**: string = ""
+3. **_reuse**: boolean
+4. **_timeout**: number = 3000
+5. **_silent**: boolean = true
+6. **_xvfb_args**: Array<string> = []
+7. **_process**: any
 
 **Methods:**
+1. **constructor(options: any)**
 
+**options:**
+* **displayNo**: number - display number. Will be converted to :1.0
+* **reuse**: boolean - reuse display if exists
+* **timeout**: number - create screen timeout. Defautl value 3000ms
+* **silent**: boolean - mute on stderr. Default value true
+* **xvfb_args**: Array<string>
+
+2. **start(cb: Function)**
+3. **startSync()**
+4. **stop(cb: Function)**
+5. **stopSync()**
+6. **display()**
+7. **_setDisplayEnvVariable()**
+8. **_restoreDisplayEnvVariable()**
+9. **_spawnProcess(onAsyncSpawnError: Function)**
+10.  **_killProcess()**
+11. **_lockFile(displayNo?: number)**: string
+12. static async **isScreenUsed(displayNo: string)**: Promise<boolean>
+13. async **_isScreenUsed()**: Promise<boolean>
+14. static **killAll()**
 ### Pulse Audio
 **Properties:**
-* **_sink_id**: string
-* **_system_sink_id**: string
-* **_process**: any
+1. **_sink_id**: string
+2. **_system_sink_id**: string
+3. **_process**: any
 
 **Methods:**
-* **constructor(sink_number: number)**
-* **set sinkId(sink_number: number)**
-* **get sinkId()**: string
-* **async start(cb?: Function)**: Promise<PulseAudio>
-* **stop(cb: Function)**: void
-* **_setSinkEnvVariable()**: void
-* **_restoreSinkEnvVariable()**: void
-* **static async killAll()**: void
-
-### Puppeteer
-**Properties:**
-
-**Methods:**
+1. **constructor(sink_number: number)**
+2. set **sinkId(sink_number: number)**
+3. get **sinkId()**: string
+4. async **start(cb?: Function)**: Promise<PulseAudio>
+5. **stop(cb: Function)**: void
+6. **_setSinkEnvVariable()**: void
+7. **_restoreSinkEnvVariable()**: void
+8. static async **killAll()**: void
 
 ### FFMPEG
 **Properties:**
+1. _roomId: string
+2. _display: string = ":1.0"
+3. _pulseSinkId: string = "default"
+4. _process: any
 
 **Methods:**
+1. **constructor(roomId: string, display: string, pulseSinkId: string)**
+2. **streamTo(dest: string)**
+3. **kill()**
+3. static **killAll()**
 
 # Refferences:
-
 ## Puppeteer:
 * [Puppeteer](https://devdocs.io/puppeteer/)
 
@@ -184,6 +251,8 @@ Reload client URL (does not kill streaming process)
 ## FFMPEG:
 * [Ffmpeg](https://trac.ffmpeg.org/wiki/Capture/Desktop)
 
-# Stream to Youtube:
+## Open Source:
 * [Github Demo](https://gist.github.com/olasd/9841772)
+* [Bigbluebutton Recorder](https://github.com/jibon57/bbb-recorder)
+* [Youtube Live Streaming API](https://developers.google.com/youtube/v3/live/docs/)
 

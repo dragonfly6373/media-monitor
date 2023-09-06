@@ -112,21 +112,22 @@ export default class MonitorClient {
         }
     }
 
-    upStream(rtmpServer: string, options: {appname: string, channelkey: string}) {
-        this.rtmpUrl = path.join(rtmpServer, options.appname, options.channelkey);
+    upStream(rtmpServer: string) {
+        this.rtmpUrl = rtmpServer;
         // ffmpeg -video_size 1365x767 -framerate 30 -f x11grab -i :1.0 -f pulse -ac 2 -i default -vcodec libx264 -f flv ${rtmpUrl} -y
         try {
             if (!this.rtmpProcess) {
                 this.rtmpProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
             }
             this.rtmpProcess.streamTo(this.rtmpUrl);
-            logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`, options);
-            return {
+            logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`);
+            return true;
+            /* {
                 rtmp: new URL(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
                     + path.join(options.appname, this.roomId)).href,
-                // flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
-                // hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
-            };
+                flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
+                hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
+            }; */
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
             throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);

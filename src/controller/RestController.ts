@@ -1,9 +1,6 @@
-import axios from 'axios';
-
 import {IResponseData} from './ResponseData';
 import monitorController from '../monitor/MonitorController';
 import Logger from '../lib/Logger';
-import { replaceUrlProtocol, replaceUrlPort } from '../lib/utils';
 import AppConfig from '../lib/AppConfig';
 
 const appConfigs = AppConfig.getConfigs();
@@ -29,16 +26,18 @@ export default class RestController {
         };
 
         switch (pathname) {
-            case '/create': {
+            case '/live': {
                 let roomId: string = params.get("roomId") || "";
                 let clientUrl: string = params.get("clientUrl") || "";
                 let rtmpServer: string = params.get("rtmpServer") || RTMPServer || "";
                 if (!roomId || !clientUrl || !rtmpServer) throw new Error("Invalid input. Required params: roomId, clientUrl, rtmpServer");
                 let client = await monitorController.createClient(roomId, clientUrl);
-                let res = await axios.get(`${rtmpServer}/control/get?room=${roomId}`, {timeout: 5000});
-                let {status, data: channelkey} = res.data;
-                logger.debug("# get rtmp url", res.data);
-                const result: any = client.upStream(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945), {appname: 'live', channelkey: channelkey as string});
+                // let res = await axios.get(`${rtmpServer}/control/get?room=${roomId}`, {timeout: 5000});
+                // let {status, data: channelkey} = res.data;
+                // logger.debug("# get rtmp url", res.data);
+                // path.join(rtmpServer, 'live', channelkey);
+                const result: any = client.upStream(rtmpServer);
+                // client.upStream(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945), {appname: 'live', channelkey: channelkey as string});
                 resData.data = result;
                 break;
             }
