@@ -14,9 +14,6 @@ export default class AppConfig {
     CHROME_DISK_CACHE_DIR: string = "";
     CHROME_DISK_CACHE_SIZE: number = 33554432; // 32 * 1024 * 1024
 
-    RTMP_SERVER: string = "http://10.70.123.13:8890";
-    RTMP_UPSTREAM: string = "rtmp://10.70.123.13:1945";
-
     RECORD_OUTPUT_DIR: string = "./temp/records";
 
     LOGGER_CONFIGS: {
@@ -35,7 +32,6 @@ export default class AppConfig {
         SCREEN_HEIGHT: number,
         CHROME_DISK_CACHE_DIR: string,
         CHROME_DISK_CACHE_SIZE: number,
-        RTMP_SERVER: string,
         RECORD_OUTPUT_DIR: string,
         LOGGER_LEVEL: number,
         LOGGER_WRITE_FILE: boolean,
@@ -50,8 +46,6 @@ export default class AppConfig {
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
         this.CHROME_DISK_CACHE_SIZE = CHROME_DISK_CACHE_SIZE;
-        this.RTMP_SERVER = RTMP_SERVER;
-        // this.RTMP_UPSTREAM = RTMP_UPSTREAM;
         this.RECORD_OUTPUT_DIR = RECORD_OUTPUT_DIR;
         this.LOGGER_CONFIGS = {
             level: LOGGER_LEVEL,
@@ -78,7 +72,6 @@ export default class AppConfig {
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
             process.env.CHROME_DISK_CACHE_DIR || "",
             parseInt(process.env.CHROME_DISK_CACHE_SIZE || "33554432"),
-            process.env.RTMP_SERVER || "",
             process.env.RECORD_OUTPUT_DIR || "",
             parseInt(process.env.LOGGER_LEVEL || "4"),
             parseBoolean(process.env.LOGGER_WRITE_FILE || "false"),
