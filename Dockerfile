@@ -40,9 +40,11 @@ COPY run.sh ./
 RUN chmod a+x ./run.sh
 RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor
 RUN usermod -aG pulse,pulse-access monitor
-RUN pulseaudio -D
 
 USER monitor
+
+RUN rm -fr  ~/.config/pulse
+RUN pulseaudio --start --daemonize
 
 # Start Service
 ENTRYPOINT ["/bin/bash","-c","/var/www/media-monitor/run.sh"]

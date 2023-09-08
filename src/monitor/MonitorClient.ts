@@ -1,11 +1,9 @@
-import process from 'process';
 import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { mkDirByPathSync, parseBoolean } from '../lib/utils';
+import { mkDirByPathSync } from '../lib/utils';
 import Xvfb from '../lib/Xvfb';
 import Logger from '../lib/Logger';
-import { replaceUrlProtocol, replaceUrlPort, spawnProcess } from '../lib/utils';
 import AppConfig from '../lib/AppConfig';
 import { PulseAudio } from '../lib/PulseAudio';
 import Ffmpeg from '../lib/Ffmpeg';

@@ -52,9 +52,9 @@ export function mkDirByPathSync(targetDir: string, { isRelativeToScript = false 
     }, initDir);
 }
 
-export function execShellCommand(cmd: string): Promise<any> {
+export function execShellCommand(cmd: string, options?: any): Promise<any> {
     return new Promise((resolve, reject) => {
-        child_process.exec(cmd, (error, stdout, stderr) => {
+        child_process.exec(cmd, options || {}, (error, stdout, stderr) => {
             if (error) {
                 console.warn(error);
             }

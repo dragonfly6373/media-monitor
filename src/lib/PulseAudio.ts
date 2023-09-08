@@ -4,12 +4,12 @@ import Logger from './Logger';
 var logger = new Logger("PulseAudio");
 
 export class PulseAudio {
-    _sink_id: string;
+    _sink_no: number;
     _system_sink_id: string;
     _process: any;
 
     constructor(sink_number: number) {
-        this._sink_id = "sink" + sink_number;
+        this._sink_no = sink_number;
         this._system_sink_id = process.env.PULSE_SINK || "";
     }
 
@@ -18,11 +18,11 @@ export class PulseAudio {
     } */
 
     get sinkId(): string {
-        return this._sink_id;    
+        return "sink" + this._sink_no;
     }
 
     async start(cb?: Function): Promise<PulseAudio> {
-        let options = ["load-module", "module-null-sink", `sink_name=${this._sink_id}`];
+        let options = ["load-module", "module-null-sink", `sink_name=${this.sinkId}`];
         logger.info("execShellCommand -", ["pactl", ...options].join(" "));
         this._process = await execShellCommand(["pactl", ...options].join(" "));
         // for ALSA: use alsamixer
@@ -34,7 +34,7 @@ export class PulseAudio {
 
     async unMute(): Promise<void> {
         this.setSinkEnvVariable();
-        await execShellCommand(`pactl set-sink-mute ${this._sink_id} 0`);
+        await execShellCommand(`pactl set-sink-mute ${this.sinkId} 0`, {env: {DISPLAY: `:${this._sink_no}`}});
         this.restoreSinkEnvVariable();
     }
 
@@ -52,7 +52,7 @@ export class PulseAudio {
 
     setSinkEnvVariable() {
         this._system_sink_id = process.env.PULSE_SINK || "";
-        process.env.PULSE_SINK = this._sink_id;
+        process.env.PULSE_SINK = this.sinkId;
     }
 
     restoreSinkEnvVariable() {
