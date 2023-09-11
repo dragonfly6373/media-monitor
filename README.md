@@ -120,6 +120,8 @@ Reload client URL (does not kill streaming process)
 * **success**: boolean
 
 ### 4. '/stop'
+Stop room live streaming process: xvfb, ffmpeg, pulseaudio go with roomId
+
 **Params:**
 * **roomId**: string (required)
 
@@ -127,12 +129,15 @@ Reload client URL (does not kill streaming process)
 * **success**: boolean
 
 ### 5. '/recStart'
+Create new Xvfb Display, open puppeteer - google chrome, join web client to room, pulseaudio create virtual audio card for each room, Ffmpeg capture entire screen and send mediastream to file.
+
 **Params:**
 * **roomId**: string (required)
 
 **Return:**
 * **success**: boolean
 ### 6. '/recPause'
+Kill current Ffmpeg for room
 **Params:**
 * **roomId**: string (required)
 
@@ -140,6 +145,8 @@ Reload client URL (does not kill streaming process)
 * **success**: boolean
 
 ## Monitor Controller
+Monitor all room client. Each room has only one client manage by roomId
+
 **Properties:**
 * **clientMap**: Map<string, MonitorClient> = new Map()
 * **clientCounter**: number = XVFB_DISPLAY_START_NUM
@@ -154,6 +161,8 @@ Reload client URL (does not kill streaming process)
 7. async **cleanResource()**: void
 
 ## MonitorClient:
+Join monitor client to room and capture screen and audio to live stream to output destination.
+
 **Properties:**
 1. **roomId**: string
 2. **clientUrl**: string
@@ -180,6 +189,8 @@ Reload client URL (does not kill streaming process)
 
 ## Libraries
 ### XVFB
+Xvfb or X virtual framebuffer is a display server implementing the X11 display server protocol. In contrast to other display servers, Xvfb performs all graphical operations in virtual memory without showing any screen output.
+
 **Properties:**
 1. **_display**: string = ""
 2. **_oldDisplay**: string = ""
@@ -212,7 +223,10 @@ Reload client URL (does not kill streaming process)
 12. static async **isScreenUsed(displayNo: string)**: Promise<boolean>
 13. async **_isScreenUsed()**: Promise<boolean>
 14. static **killAll()**
+
 ### Pulse Audio
+PulseAudio is a network-capable sound server program distributed via the freedesktop.org project
+
 **Properties:**
 1. **_sink_id**: string
 2. **_system_sink_id**: string
@@ -229,6 +243,8 @@ Reload client URL (does not kill streaming process)
 8. static async **killAll()**: void
 
 ### FFMPEG
+FFmpeg is a free and open-source software project consisting of a suite of libraries and programs for handling video, audio, and other multimedia files and streams.
+
 **Properties:**
 1. _roomId: string
 2. _display: string = ":1.0"
@@ -252,7 +268,7 @@ Reload client URL (does not kill streaming process)
 * [Ffmpeg](https://trac.ffmpeg.org/wiki/Capture/Desktop)
 
 ## Open Source:
-* [Github Demo](https://gist.github.com/olasd/9841772)
 * [Bigbluebutton Recorder](https://github.com/jibon57/bbb-recorder)
+* [Live Go - RTMP Server](https://github.com/gwuhaolin/livego)
+* [Stream to Youtube - Github Demo](https://gist.github.com/olasd/9841772)
 * [Youtube Live Streaming API](https://developers.google.com/youtube/v3/live/docs/)
-

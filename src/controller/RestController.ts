@@ -45,14 +45,6 @@ export default class RestController {
                 const result: any = client?.restartStream();
                 resData.data = result;
             }
-            case '/live': {
-                let roomId: string = params.get("roomId") || "";
-                if (!roomId) throw new Error("Invalid input. Required params: roomId");
-                logger.info("live", {roomId});
-                // TODO: implement get livestream url by roomId
-                resData.data = true;
-                break;
-            }
             case '/recStart': {
                 let roomId: string = params.get("roomId") || "";
                 if (!roomId) throw new Error("Invalid input. Required params: roomId");
