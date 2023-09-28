@@ -1,0 +1,22 @@
+[Unit]
+Description=Live Streaming Application
+After=network-online.target
+
+[Service]
+User=root
+Restart=always
+RestartSec=3
+
+# do chdir before running the service
+WorkingDirectory=/var/www/live-streaming/
+ExecStart=/usr/bin/node './dist/server.js'
+
+# limit CPU and RAM quota for our service
+CPUAccounting=true
+CPUQuota=60%
+MemoryAccounting=true
+MemoryLimit=5000M
+
+[Install]
+WantedBy=multi-user.target
+

@@ -172,7 +172,7 @@ export default class Xvfb {
 
         let args = [display].concat(this._xvfb_args);
         logger.info("spawnProcess ", ["Xvfb", ...args].join(" "));
-        this._process = spawnProcess('Xvfb', args, (data: any) => {
+        this._process = spawnProcess('Xvfb', args, {}, (data: any) => {
             if (!this._silent) {
                 process.stderr.write(data);
             }

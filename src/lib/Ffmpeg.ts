@@ -60,10 +60,15 @@ export default class Ffmpeg {
         ];
         logger.info(`RoomID ${this._roomId} - ffmpeg`, args.join(" "));
         try {
-            this._process = spawnProcess("ffmpeg", args, (data: any) => {
-                // process.stderr.write(data);
-                // logger.debug("ffmpeg stderr", data);
-            });
+            this._process = spawnProcess("ffmpeg", args,
+                {
+                    DISPLAY: `:${this._display}`,
+                    PULSE_SINK: this._pulseSinkId
+                },
+                (data: any) => {
+                    // process.stderr.write(data);
+                    // logger.debug("ffmpeg stderr", data);
+                });
             this._process.on("error", (data: any) => logger.info("ffmpeg error", data));
             this._process.on("close", (data: any) => logger.info("ffmpeg close", data));
             this._process.on("exit", (data: any) => logger.info("ffmpeg exit", data));

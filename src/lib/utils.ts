@@ -55,16 +55,15 @@ export function mkDirByPathSync(targetDir: string, { isRelativeToScript = false 
 export function execShellCommand(cmd: string, options?: any): Promise<any> {
     return new Promise((resolve, reject) => {
         child_process.exec(cmd, options || {}, (error, stdout, stderr) => {
-            if (error) {
-                console.warn(error);
-            }
+            // console.log(" >> exec command" + cmd, error);
+            if (error) return reject(error);
             resolve(stdout ? stdout : stderr);
         });
     });
 }
 
-export function spawnProcess(cmd: string, options: Array<string>, stdcallback: Function): child_process.ChildProcessWithoutNullStreams {
-    const child = child_process.spawn(cmd, options)
+export function spawnProcess(cmd: string, args: Array<string>, options: any = {}, stdcallback: Function): child_process.ChildProcessWithoutNullStreams {
+    const child = child_process.spawn(cmd, args, options);
     child.stdout.on('data', (data: any) => stdcallback.call(stdcallback, cmd, "stdout", data?.toString()));
     child.stderr.on('data', (data: any) => stdcallback.call(stdcallback, cmd, "stderr", data?.toString()));
     // child.on('exit', (data: any) => callback.call(callback, cmd, "exit", data?.toString()));

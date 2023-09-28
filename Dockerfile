@@ -26,10 +26,10 @@
 #     && rm -rf /var/lib/apt/lists/* \
 #     && rm -rf /src/*.deb
 
-FROM nguyendang2022/livestream-base:v1.0.1
+FROM livestream-base:v1.0.1
 
-RUN mkdir -p /var/log/gomeet-v3/monitor
-WORKDIR /var/www/media-monitor
+RUN mkdir -p /var/log/live-streaming
+WORKDIR /var/www/live-streaming
 
 COPY package.json package-lock.json .env ./
 RUN npm install --production
@@ -38,15 +38,29 @@ COPY ./dist ./dist
 # CMD npm run start:prod
 COPY run.sh ./
 RUN chmod a+x ./run.sh
-RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor
+RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor -d /home/monitor
 RUN usermod -aG pulse,pulse-access monitor
+# Check dbus Service
+# RUN chkconfig dbus on
+# RUN service start dbus
+RUN /etc/init.d/dbus start
+# RUN rc-update add dbus default
 
 USER monitor
 
-RUN rm -fr  ~/.config/pulse
+RUN service pulseaudio.{socket,service} stop
+RUN rm -fr /home/monitor/.pulse
+RUN rm -fr /home/monitor/.pulse-cookie
+RUN rm -fr /home/monitor/.config/pulse
+COPY pulse/client.conf /home/monitor/.config/pulse/
+COPY pulse/default.pa /home/monitor/.config/pulse/
+
+# Start PulseAudio Daemonize
+RUN systemctl start --user pulseaudio.{socket,service}
 RUN pulseaudio --start --daemonize
+RUN pulseaudio -k
 
 # Start Service
-ENTRYPOINT ["/bin/bash","-c","/var/www/media-monitor/run.sh"]
+ENTRYPOINT ["/bin/bash","-c","/var/www/live-streaming/run.sh"]
 
 EXPOSE 8090

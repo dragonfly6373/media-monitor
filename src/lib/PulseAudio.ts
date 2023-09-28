@@ -24,26 +24,52 @@ export class PulseAudio {
     async start(cb?: Function): Promise<PulseAudio> {
         let options = ["load-module", "module-null-sink", `sink_name=${this.sinkId}`];
         logger.info("execShellCommand -", ["pactl", ...options].join(" "));
-        this._process = await execShellCommand(["pactl", ...options].join(" "));
-        // for ALSA: use alsamixer
-        // for Pulseaudio: use pacmd set-sink-mute n 0 where n is the sink index (likely 0)
-        this.unMute();
+        // this.setSinkEnvVariable();
+        await execShellCommand(["pactl", ...options].join(" "), {
+            // env: {
+            //     DISPLAY: `:${this._sink_no}`,
+            //     PULSE_SINK: this.sinkId
+            // }
+        }).then((processId: any) => {
+            this._process = processId;
+            // for ALSA: use alsamixer
+            // for Pulseaudio: use pacmd set-sink-mute n 0 where n is the sink index (likely 0)
+            this.unMute();
+        }).catch((error: any) => {
+            logger.error("failed to load pulse module with error: ", error);
+        });
+        // this.restoreSinkEnvVariable();
         if (cb) cb(null, this._process);
         return this;
     }
 
     async unMute(): Promise<void> {
-        this.setSinkEnvVariable();
-        await execShellCommand(`pactl set-sink-mute ${this.sinkId} 0`, {env: {DISPLAY: `:${this._sink_no}`}});
-        this.restoreSinkEnvVariable();
+        logger.debug("unMute", this._process);
+        // this.setSinkEnvVariable();
+        await execShellCommand(`pactl set-sink-mute ${this.sinkId} 0`, {
+            env: {
+                DISPLAY: `:${this._sink_no}`,
+                PULSE_SINK: this.sinkId
+            }
+        }).catch(error => {
+            logger.error("failed to unmute pulse module" + this._process + " with error: ", error);
+        });
+        // this.restoreSinkEnvVariable();
     }
 
     stop(cb: Function) {
         if (this._process) {
             logger.info("execShellCommand -", ["pactl", "unload-module", this._process].join(" "));
-            this.setSinkEnvVariable();
-            execShellCommand(`pactl unload-module ${this._process}`);
-            this.restoreSinkEnvVariable();
+            // this.setSinkEnvVariable();
+            execShellCommand(`pactl unload-module ${this._process}`, {
+                env: {
+                    DISPLAY: `:${this._sink_no}`,
+                    PULSE_SINK: this.sinkId
+                }
+            }).catch(error => {
+                logger.error("failed to unload pulse module" + this._process + " with error: ", error);
+            });
+            // this.restoreSinkEnvVariable();
             if (cb) cb(null, this._process);
         } else {
             return cb && cb(null);

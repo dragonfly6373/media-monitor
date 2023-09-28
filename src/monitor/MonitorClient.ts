@@ -28,7 +28,7 @@ export default class MonitorClient {
     screenNo: number = 99;
 
     xvfbProcess: any;
-    pulseProcess: PulseAudio | any = null;
+    pulseProcess: PulseAudio | any;
     browser: Browser | null = null;
     rtmpProcess: Ffmpeg | null = null;
     recProcess: Ffmpeg | null = null;
@@ -42,7 +42,7 @@ export default class MonitorClient {
         logger.info(`RoomID ${this.roomId} start new monitor client`);
         this.screenNo = screenNo;
         this.pulseProcess = new PulseAudio(screenNo);
-        this.pulseProcess.start((error: any, data: any) => {
+        await this.pulseProcess.start((error: any, data: any) => {
             if (error) logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
             else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
         });
@@ -257,13 +257,25 @@ export default class MonitorClient {
     _handlePage(page?: Page | null) {
         if (!page) return;
         try {
-            page.waitForSelector(".ytp-play-button")
+            /** for test youtube page */
+            /* page.waitForSelector(".ytp-play-button")
                 .then(() => {
                     page.$eval(".ytp-play-button", (el: any) => {
+                        if (el?.title.includes("Play")) el?.click();
+                    }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                })
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error)); */
+
+            /** for test zing mp3 page */
+            page.waitForSelector(".btn-play-all")
+                .then(() => {
+                    page.$eval(".btn-play-all", (el: any) => {
                         el?.click();
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
                 })
                 .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+
+            /** GoMeet click to join audio */
             page.waitForSelector("#join-audio-btn")
                 .then(() => {
                     page.$eval("#join-audio-btn", (el: any) => {
@@ -272,6 +284,8 @@ export default class MonitorClient {
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} click element error`, error.message));
                 })
                 .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
+
+            /** GoMeet click to active fullscreen */
             page.waitForSelector("#btnFullScreen")
                 .then(() => {
                     page.$eval("#btnFullScreen", (el: any) => {
