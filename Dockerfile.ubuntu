@@ -1,5 +1,5 @@
 # Use ubuntu 20.04 as the base image
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 LABEL version="1.0.1"
 LABEL description="Media Monitor"
@@ -14,10 +14,23 @@ RUN apt-get install -y software-properties-common \
 # && apt-get clean \
 # && rm -rf /var/lib/apt/lists/* /var/cache/* /var/log/*
 
+# RUN add-apt-repository main
+# RUN add-apt-repository universe
+# RUN add-apt-repository --remove ppa:mc3man/trusty-media
+# RUN add-apt-repository --remove ppa:network-manager/trunk
+
 # Add the ffmpeg 5 repository
-RUN add-apt-repository --remove ppa:mc3man/trusty-media
-RUN add-apt-repository --remove ppa:network-manager/trunk
-# RUN add-apt-repository ppa:savoury1/ffmpeg5
+# RUN add-apt-repository ppa:savoury1/ffmpeg5 -y
+# RUN add-apt-repository ppa:savoury1/ffmpeg4 -y
+# manually install the packages over the existing savory1 ones:
+RUN apt-get install -y libavcodec58=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libavdevice58=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libavfilter7=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libavformat58=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libavutil56=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libpostproc55=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libswresample3=7:4.4.2-0ubuntu0.22.04.1
+RUN apt-get install -y libswscale5=7:4.4.2-0ubuntu0.22.04.1
 # RUN add-apt-repository ppa:ubuntudde-dev/stable
 # Add the google-chrome repository and install
 RUN curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add
@@ -26,8 +39,10 @@ RUN echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >
 #  --no-install-recommends
 RUN apt-get -y update && apt-get -y full-upgrade \
     && apt-get install -y libasound2 libasound2-plugins alsa-utils alsa-oss \
-    && apt-get install -y ffmpeg xvfb pulseaudio pulseaudio-utils google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/* \
+    && apt-get install ppa-purge \
+    && apt-get install -y xvfb pulseaudio pulseaudio-utils google-chrome-stable
+RUN apt-get install ffmpeg
+RUN rm -rf /var/lib/apt/lists/* \
     && rm -rf /src/*.deb
 
 # Add the node js 18.x repository and install
