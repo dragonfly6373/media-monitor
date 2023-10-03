@@ -30,17 +30,27 @@
 }
 ```
 
-**Create Client from clientUrl and get RMTP Link:**
-> curl --location 'http://localhost:8090/live?roomId=demo&clientUrl=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Db1kbLwvqugk&rtmpServer=http%3A%2F%2F10.70.123.13%3A8890'
+**Live stream:**
+> curl --location 'http://localhost:8090/live?roomId=demo&clientUrl=https%3A%2F%2Fzingmp3.vn%2Falbum%2FCafe-Sai-Gon-Nguyen-Vu%2FZWZBFIU0.html&rtmpServer=http%3A%2F%2F10.70.123.13%3A8890'
 
 **Reload Client If any error occur:**
-> curl --location 'http://localhost:8090/reload?roomId=demo&clientUrl=https%3A%2F%2Fgomeetv3-dev.vnptit.vn%2Froom%3FsessionToken%3DBfN7nuQFQiSNDH3xia22kPEttgYDmMn7'
+> curl --location 'http://localhost:8090/reload?roomId=demo&clientUrl=https%3A%2F%2Fzingmp3.vn%2Falbum%2FCafe-Sai-Gon-Nguyen-Vu%2FZWZBFIU0.html'
+
+**Record Monitor Client:**
+> curl --location 'http://localhost:8090/recStart?roomId=demo&clientUrl=https%3A%2F%2Fzingmp3.vn%2Falbum%2FCafe-Sai-Gon-Nguyen-Vu%2FZWZBFIU0.html'
+
+**Pause Record Monitor Client:**
+> curl --location 'http://localhost:8090/recPause?roomId=demo'
 
 **Stop Monitor Client:**
 > curl --location 'http://localhost:8090/stop?roomId=demo'
 
 ## Build Docker:
+> npm run build:docker-base
 > npm run build:docker
+
+## Run Docker:
+> sudo docker run --privileged -it --rm -p 8090:8090 -v $(pwd)/tmp/records:/tmp/live-streaming/records -v $(pwd)/tmp/--name live-streaming nguyendang2022/media-monitor:v1.0.1
 
 ## Build Production:
 > npm run build:prod

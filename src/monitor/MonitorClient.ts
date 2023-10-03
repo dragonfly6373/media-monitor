@@ -41,16 +41,20 @@ export default class MonitorClient {
     async start(screenNo: number) {
         logger.info(`RoomID ${this.roomId} start new monitor client`);
         this.screenNo = screenNo;
-        this.pulseProcess = new PulseAudio(screenNo);
-        await this.pulseProcess.start((error: any, data: any) => {
-            if (error) logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
-            else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
-        });
-        this.xvfbProcess = this._newScreen();
-        this.browser = await this._newBrowser(this.clientUrl, {
-            xvfb: this.xvfbProcess,
-            pulseAudio: this.pulseProcess
-        });
+        try {
+            this.pulseProcess = new PulseAudio(screenNo);
+            await this.pulseProcess.start((error: any, data: any) => {
+                if (error) logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
+                else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
+            });
+            this.xvfbProcess = this._newScreen();
+            this.browser = await this._newBrowser(this.clientUrl, {
+                xvfb: this.xvfbProcess,
+                pulseAudio: this.pulseProcess
+            });
+        } catch(error: any) {
+            throw new Error("Failed to start monitor client with error " + error.message);
+        }
     }
 
     async reload(clientUrl?: string) {
@@ -106,13 +110,12 @@ export default class MonitorClient {
                 throw new Error("Record is not running");
             }
         } catch(error: any) {
-            throw new Error("Fail to stop record with error" + error.message);
+            throw new Error("Fail to stop record with error " + error.message);
         }
     }
 
     upStream(rtmpServer: string) {
         this.rtmpUrl = rtmpServer;
-        // ffmpeg -video_size 1365x767 -framerate 30 -f x11grab -i :1.0 -f pulse -ac 2 -i default -vcodec libx264 -f flv ${rtmpUrl} -y
         try {
             if (!this.rtmpProcess) {
                 this.rtmpProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
@@ -120,12 +123,6 @@ export default class MonitorClient {
             this.rtmpProcess.streamTo(this.rtmpUrl);
             logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`);
             return true;
-            /* {
-                rtmp: new URL(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945)
-                    + path.join(options.appname, this.roomId)).href,
-                flv: new URL(replaceUrlPort(rtmpServer, 7001) + path.join(options.appname, `${this.roomId}.flv`)).href,
-                hls: new URL(replaceUrlPort(rtmpServer, 7002) + path.join(options.appname, `${this.roomId}.m3u8`)).href
-            }; */
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} Failed to live stream to ` + this.rtmpUrl + "with error:", error);
             throw new Error(`RoomID ${this.roomId} Failed to create live stream with error: ` + error.message);

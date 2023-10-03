@@ -38,30 +38,34 @@ COPY ./dist ./dist
 # CMD npm run start:prod
 COPY run.sh ./
 RUN chmod a+x ./run.sh
-RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor -d /home/monitor
-RUN usermod -aG pulse,pulse-access monitor
+# RUN useradd -rm -s /bin/bash -g root -G sudo -u 1001 monitor -d /home/monitor
+# RUN usermod -aG pulse,pulse-access monitor
 RUN adduser root pulse-access
+RUN sed -i '/; default-server/c\; default-server = /var/run/pulse/native' /etc/pulse/client.conf
 # RUN mkdir -p /home/monitor/.config/systemd/user/docker.service.d
-RUN mkdir /run/user/1001
-RUN chown -R monitor /run/user/1001
-RUN chown -R monitor /home/monitor
+# RUN mkdir /run/user/1001
+# RUN chown -R monitor /run/user/1001
+# RUN chown -R monitor /home/monitor
 # Check dbus Service
 # RUN chkconfig dbus on
 # RUN service start dbus
 # RUN /etc/init.d/dbus start
 # RUN rc-update add dbus default
 
-USER monitor
+# USER monitor
 # RUN export XDG_RUNTIME_DIR="/run/user/$UID"
 # RUN export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 
-# RUN systemctl --user enable pulseaudio
-# RUN systemctl --user stop pulseaudio.{socket,service}
-RUN rm -fr /home/monitor/.pulse
-RUN rm -fr /home/monitor/.pulse-cookie
-RUN rm -fr /home/monitor/.config/pulse
-COPY pulse/client.conf /home/monitor/.config/pulse/
-COPY pulse/default.pa /home/monitor/.config/pulse/
+# RUN rm -fr /home/monitor/.pulse
+# RUN rm -fr /home/monitor/.pulse-cookie
+# RUN rm -fr /home/monitor/.config/pulse
+# COPY pulse/client.conf /home/monitor/.config/pulse/
+# COPY pulse/default.pa /home/monitor/.config/pulse/
+
+COPY pulse/pulseaudio.service /etc/systemd/system/pulseaudio.service
+RUN systemctl --system enable pulseaudio
+# RUN dbus-launch
+# RUN systemctl --system start pulseaudio.{socket,service}
 
 # # Start PulseAudio Daemonize
 # RUN systemctl --user start pulseaudio.{socket,service}

@@ -28,37 +28,59 @@ export default class RestController {
                 let clientUrl: string = params.get("clientUrl") || "";
                 let rtmpServer: string = params.get("rtmpServer") || "";
                 if (!roomId || !clientUrl || !rtmpServer) throw new Error("Invalid input. Required params: roomId, clientUrl, rtmpServer");
-                let client = await monitorController.createClient(roomId, clientUrl);
-                // let res = await axios.get(`${rtmpServer}/control/get?room=${roomId}`, {timeout: 5000});
-                // let {status, data: channelkey} = res.data;
-                // logger.debug("# get rtmp url", res.data);
-                // path.join(rtmpServer, 'live', channelkey);
-                const result: any = client.upStream(rtmpServer);
-                // client.upStream(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945), {appname: 'live', channelkey: channelkey as string});
-                resData.data = result;
+                try {
+                    let client = await monitorController.createClient(roomId, clientUrl);
+                    // let res = await axios.get(`${rtmpServer}/control/get?room=${roomId}`, {timeout: 5000});
+                    // let {status, data: channelkey} = res.data;
+                    // logger.debug("# get rtmp url", res.data);
+                    // path.join(rtmpServer, 'live', channelkey);
+                    const result: any = client.upStream(rtmpServer);
+                    // client.upStream(replaceUrlPort(replaceUrlProtocol(rtmpServer, "rtmp"), 1945), {appname: 'live', channelkey: channelkey as string});
+                    resData.data = result;
+                } catch(error: any) {
+                    resData.code = 500;
+                    resData.data = error.message || error;
+                }
                 break;
             }
             case '/restart': {
                 let roomId: string = params.get("roomId") || "";
                 if (!roomId) throw new Error("Invalid input. Required params: roomId");
-                let client = monitorController.getClient(roomId);
-                const result: any = client?.restartStream();
-                resData.data = result;
+                try {
+                    let client = monitorController.getClient(roomId);
+                    const result: any = client?.restartStream();
+                    resData.data = result;
+                } catch(error: any) {
+                    resData.code = 500;
+                    resData.data = error.message || error;
+                }
             }
             case '/recStart': {
                 let roomId: string = params.get("roomId") || "";
+                let clientUrl: string = params.get("clientUrl") || "";
                 if (!roomId) throw new Error("Invalid input. Required params: roomId");
                 logger.info("recStart", {roomId});
-                monitorController.getClient(roomId)?.recStart();
-                resData.data = true
+                try {
+                    let client = await monitorController.createClient(roomId, clientUrl);
+                    client?.recStart();
+                    resData.data = true;
+                } catch(error: any) {
+                    resData.code = 500;
+                    resData.data = error.message || error;
+                }
                 break;
             }
             case '/recPause': {
                 let roomId: string = params.get("roomId") || "";
                 if (!roomId) throw new Error("Invalid input. Required params: roomId");
                 logger.info("recPause", {roomId});
-                monitorController.getClient(roomId)?.recPause();
-                resData.data = true
+                try {
+                    monitorController.getClient(roomId)?.recPause();
+                    resData.data = true;
+                } catch(error: any) {
+                    resData.code = 500;
+                    resData.data = error.message || error;
+                }
                 break;
             }
             case '/reload': {
@@ -67,8 +89,13 @@ export default class RestController {
                 if (!roomId) throw new Error("Invalid input. Params: roomId (required), clientUrl (optional)");
                 // TODO: implement update livestream clientUrl by roomId
                 logger.info("reload", {roomId, clientUrl});
-                monitorController.reload(roomId, clientUrl);
-                resData.data = true;
+                try {
+                    monitorController.reload(roomId, clientUrl);
+                    resData.data = true;
+                } catch(error: any) {
+                    resData.code = 500;
+                    resData.data = error.message || error;
+                }
                 break;
             }
             case '/stop': {
@@ -81,7 +108,7 @@ export default class RestController {
                     })
                     .catch((error: any) => {
                         resData.code = 500;
-                        resData.data = "Internal Server error" + error.message;
+                        resData.data = "Internal Server error " + (error.message || error);
                     });
                 break;
             }

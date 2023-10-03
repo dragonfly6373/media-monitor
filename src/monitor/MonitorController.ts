@@ -23,6 +23,7 @@ class MonitorController {
     async createClient(roomId: string, clientUrl: string): Promise<MonitorClient> {
         logger.info(`RoomID ${roomId} createClient ${clientUrl}`);
         if (this.clientMap.has(roomId)) return this.clientMap.get(roomId) as MonitorClient;
+        if (!clientUrl) throw new Error("Invalid input. clientUrl is required");
         let client = new MonitorClient(roomId, clientUrl);
         await client.start(this.nextScreenNumber());
         this.clientMap.set(roomId, client);

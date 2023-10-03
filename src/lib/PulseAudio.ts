@@ -26,10 +26,10 @@ export class PulseAudio {
         logger.info("execShellCommand -", ["pactl", ...options].join(" "));
         // this.setSinkEnvVariable();
         await execShellCommand(["pactl", ...options].join(" "), {
-            // env: {
-            //     DISPLAY: `:${this._sink_no}`,
+            env: {
+                DISPLAY: `:${this._sink_no}`,
             //     PULSE_SINK: this.sinkId
-            // }
+            }
         }).then((processId: any) => {
             this._process = processId;
             // for ALSA: use alsamixer
