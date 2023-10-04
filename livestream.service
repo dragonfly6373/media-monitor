@@ -8,7 +8,7 @@ Restart=always
 RestartSec=3
 
 # do chdir before running the service
-WorkingDirectory=/var/www/live-streaming/
+WorkingDirectory=/opt/live-streaming/
 ExecStart=/usr/bin/node './dist/server.js'
 
 # limit CPU and RAM quota for our service

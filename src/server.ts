@@ -52,7 +52,8 @@ server.listen(serverPort, () => {
     logger.info("Application Configs:", appConfigs);
 });
 
-const exitHandler = (options: any, exitCode: number) => {
+const uncaughtErrorHandler = (options: any, exitCode: number) => {
+    logger.error("uncaughtErrorHandler", options, exitCode);
     try {
         if (options.cleanup) {
             logger.info('clean');
@@ -68,15 +69,15 @@ const exitHandler = (options: any, exitCode: number) => {
     }
 }
 
-//do something when app is closing
-process.on('exit', exitHandler.bind(null, {cleanup: true}));
+// do something when app is closing
+process.on('exit', uncaughtErrorHandler.bind(null, {cleanup: true}));
 
-//catches ctrl+c event
-process.on('SIGINT', exitHandler.bind(null, {exit: true}));
+// catches ctrl+c event
+process.on('SIGINT', uncaughtErrorHandler.bind(null, {exit: true}));
 
 // catches "kill pid" (for example: nodemon restart)
-process.on('SIGUSR1', exitHandler.bind(null, {exit: true}));
-process.on('SIGUSR2', exitHandler.bind(null, {exit: true}));
+process.on('SIGUSR1', uncaughtErrorHandler.bind(null, {exit: true}));
+process.on('SIGUSR2', uncaughtErrorHandler.bind(null, {exit: true}));
 
-//catches uncaught exceptions
-process.on('uncaughtException', exitHandler.bind(null, {exit: true}));
+// catches uncaught exceptions
+process.on('uncaughtException', uncaughtErrorHandler.bind(null, {cleanup: false, exit: false}));

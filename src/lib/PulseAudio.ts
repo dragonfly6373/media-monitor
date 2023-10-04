@@ -28,7 +28,7 @@ export class PulseAudio {
         await execShellCommand(["pactl", ...options].join(" "), {
             env: {
                 DISPLAY: `:${this._sink_no}`,
-            //     PULSE_SINK: this.sinkId
+                // PULSE_SINK: this.sinkId
             }
         }).then((processId: any) => {
             this._process = processId;
@@ -37,6 +37,7 @@ export class PulseAudio {
             this.unMute();
         }).catch((error: any) => {
             logger.error("failed to load pulse module with error: ", error);
+            throw new Error("failed to load pulse module with error: " + (error.message || error));
         });
         // this.restoreSinkEnvVariable();
         if (cb) cb(null, this._process);
@@ -53,6 +54,7 @@ export class PulseAudio {
             }
         }).catch(error => {
             logger.error("failed to unmute pulse module" + this._process + " with error: ", error);
+            throw new Error("failed to unmute pulse module" + this._process + " with error: " + (error.message || error));
         });
         // this.restoreSinkEnvVariable();
     }
@@ -68,6 +70,7 @@ export class PulseAudio {
                 }
             }).catch(error => {
                 logger.error("failed to unload pulse module" + this._process + " with error: ", error);
+                throw new Error("failed to unload pulse module" + this._process + " with error: " + (error.message || error));
             });
             // this.restoreSinkEnvVariable();
             if (cb) cb(null, this._process);
@@ -86,7 +89,12 @@ export class PulseAudio {
     }
 
     static async killAll() {
-        let result = await execShellCommand("pactl unload-module module-null-sink");
-        logger.info(" > kill all pulseaduio module", result);
+        try {
+            let result = await execShellCommand("pactl unload-module module-null-sink");
+            logger.info(" > kill all pulseaduio module", result);
+        } catch(error: any) {
+            logger.error("Failed to kill all pulseaudio process with error: ", error);
+            throw new Error("Failed to kill all pulseaudio process with error: " + (error.message || error));
+        }
     }
 }

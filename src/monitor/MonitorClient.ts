@@ -31,23 +31,44 @@ export default class MonitorClient {
     pulseProcess: PulseAudio | any;
     browser: Browser | null = null;
     rtmpProcess: Ffmpeg | null = null;
+    rtmpStartTime: number = 0;
     recProcess: Ffmpeg | null = null;
+    recStartTime: number = 0;
 
     constructor(roomId: string, clientUrl: string) {
         this.roomId = roomId;
         this.clientUrl = clientUrl;
     }
 
+    getClientInfo() {
+        return {
+            roomId: this.roomId,
+            clientUrl: this.clientUrl,
+            livestream: {
+                status: this.rtmpProcess ? "running" : "stoped",
+                startTime: this.rtmpStartTime,
+                duration: (Date.now() - this.rtmpStartTime) / 1000
+            },
+            record: {
+                status: this.recProcess ? "running" : "stopped",
+                startTime: this.recStartTime,
+                duration: (Date.now() - this.recStartTime) / 1000
+            }
+        }
+    }
+
     async start(screenNo: number) {
         logger.info(`RoomID ${this.roomId} start new monitor client`);
         this.screenNo = screenNo;
         try {
+            this.xvfbProcess = this._newScreen();
             this.pulseProcess = new PulseAudio(screenNo);
             await this.pulseProcess.start((error: any, data: any) => {
-                if (error) logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
-                else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
+                if (error) {
+                    logger.error(`RoomID ${this.roomId} failed to start new pulseAudio procees with error`, error.message);
+                    throw new Error("Failed to start monitor client with error " + (error.message || error));
+                } else logger.info(`RoomId ${this.roomId} start new pulseAudio`, this.pulseProcess.sinkId, data);
             });
-            this.xvfbProcess = this._newScreen();
             this.browser = await this._newBrowser(this.clientUrl, {
                 xvfb: this.xvfbProcess,
                 pulseAudio: this.pulseProcess
@@ -59,6 +80,7 @@ export default class MonitorClient {
 
     async reload(clientUrl?: string) {
         logger.info(`RoomID ${this.roomId} reload page`);
+        if (clientUrl) this.clientUrl = clientUrl;
         if (this.browser) {
             let [page] = await this.browser?.pages() || [null];
             if (!page) {
@@ -86,6 +108,7 @@ export default class MonitorClient {
 
     recStart() {
         logger.info(`RoomID ${this.roomId} start record`);
+        if (this.recProcess) throw new Error("Record is current running");
         try {
             const filePath = path.join(RECORD_OUTPUT_DIR, this.roomId, `${Date.now()}.mkv`);
             mkDirByPathSync(path.dirname(filePath));
@@ -93,11 +116,12 @@ export default class MonitorClient {
                 this.recProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
             }
             this.recProcess.streamTo(filePath);
+            this.recStartTime = Date.now();
+            return true;
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} record fail with error:`, error);
             return false;
         }
-        return true;
     }
 
     recPause() {
@@ -106,6 +130,7 @@ export default class MonitorClient {
             if (this.recProcess) {
                 this.recProcess.kill();
                 this.recProcess = null;
+                this.recStartTime = 0;
             } else {
                 throw new Error("Record is not running");
             }
@@ -121,6 +146,7 @@ export default class MonitorClient {
                 this.rtmpProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
             }
             this.rtmpProcess.streamTo(this.rtmpUrl);
+            this.rtmpStartTime = Date.now();
             logger.info(`RoomID ${this.roomId} upStream to ${this.rtmpUrl}`);
             return true;
         } catch(error: any) {
@@ -234,6 +260,8 @@ export default class MonitorClient {
             ].forEach((domain) => context.overridePermissions(domain, ['notifications']));
             // let page: Page = await browser.newPage();
             let [page] = await browser.pages();
+            if (!page) page = await browser.newPage();
+
             page.setViewport(VIEWPORT);
             // page.waitForDevicePrompt().catch(logger.warn);
             await page.goto(clientUrl, { waitUntil: 'networkidle2' });
@@ -246,6 +274,7 @@ export default class MonitorClient {
         } catch (error: any) {
             // return callback(error);
             logger.error(`RoomID ${this.roomId} Failed to create new browser with error:`, error);
+            throw new Error(`RoomID ${this.roomId} Failed to create new browser with error:` + (error.message || error));
         } finally {
             return browser as Browser;
         }

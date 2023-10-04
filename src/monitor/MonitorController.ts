@@ -1,6 +1,5 @@
 import Logger from "../lib/Logger";
 import MonitorClient from "./MonitorClient";
-import { execShellCommand } from "../lib/utils";
 import AppConfig from "../lib/AppConfig";
 import Xvfb from "../lib/Xvfb";
 import { PulseAudio } from "../lib/PulseAudio";
@@ -25,7 +24,10 @@ class MonitorController {
         if (this.clientMap.has(roomId)) return this.clientMap.get(roomId) as MonitorClient;
         if (!clientUrl) throw new Error("Invalid input. clientUrl is required");
         let client = new MonitorClient(roomId, clientUrl);
-        await client.start(this.nextScreenNumber());
+        await client.start(this.nextScreenNumber()).catch((error: any) => {
+            client!.stop();
+            throw new Error("Failed to create new Client for room " + roomId + " with error: " + (error.message || error));
+        });
         this.clientMap.set(roomId, client);
         return client;
     }
@@ -35,13 +37,20 @@ class MonitorController {
     }
 
     async reload(roomId: string, clientUrl: string) {
-        let client = this.clientMap.get(roomId) as MonitorClient;
-        client?.reload(clientUrl);
+        if (!this.clientMap.has(roomId)) {
+            throw new Error("no client data for room " + roomId);
+        }
+        try {
+            let client = this.clientMap.get(roomId) as MonitorClient;
+            client?.reload(clientUrl);
+        } catch(error: any) {
+            throw new Error("Failed to reload browser client for room " + roomId + " with error" + (error.message || error));
+        }
     }
 
     async stopClient(roomId: string) {
         if (!this.clientMap.has(roomId)) {
-            throw new Error("no client data for room " + roomId);
+            throw new Error("No client data for room " + roomId);
         }
         try {
             let client = this.clientMap.get(roomId);
@@ -52,16 +61,21 @@ class MonitorController {
                 this.cleanResource();
             }
         } catch(error: any) {
-            throw new Error("fail to stop browser client for room " + roomId + " with error" + error.message);
+            throw new Error("Failed to stop browser client for room " + roomId + " with error" + error.message);
         }
     }
 
     async cleanResource() {
-        logger.info("all client closed. clean all resource");
+        logger.info("All client closed. clean all resource");
         this.clientCounter = XVFB_DISPLAY_START_NUM;
         Ffmpeg.killAll();
         Xvfb.killAll();
         PulseAudio.killAll();
+    }
+
+    getAllClient() {
+        return Array.from(this.clientMap.values())
+            .map((client: MonitorClient) => client.getClientInfo());
     }
 }
 

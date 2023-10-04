@@ -90,7 +90,7 @@ export default class RestController {
                 // TODO: implement update livestream clientUrl by roomId
                 logger.info("reload", {roomId, clientUrl});
                 try {
-                    monitorController.reload(roomId, clientUrl);
+                    await monitorController.reload(roomId, clientUrl);
                     resData.data = true;
                 } catch(error: any) {
                     resData.code = 500;
@@ -110,6 +110,11 @@ export default class RestController {
                         resData.code = 500;
                         resData.data = "Internal Server error " + (error.message || error);
                     });
+                break;
+            }
+            case '/getAll': {
+                logger.info("get all running clients");
+                resData.data = monitorController.getAllClient();
                 break;
             }
             default:
