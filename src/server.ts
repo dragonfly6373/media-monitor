@@ -28,13 +28,15 @@ var server = createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
         const url = new URL(req.url || "", domain + ":" + serverPort);
         controller.exec(req.method || "GET", url.pathname, url.searchParams).then((resData: IResponseData) => {
-            if (resData.headers && resData.headers instanceof Object && Object.keys(resData.headers).length > 0) {
-                res.writeHead( resData.code, resData.headers);
-            } else if (resData.code != 200) {
+            if (resData.code != 200) {
                 res.statusCode = resData.code;
             }
+            if (resData.headers && resData.headers instanceof Object && Object.keys(resData.headers).length > 0) {
+                res.writeHead( resData.code, resData.headers);
+            }
             // logger.debug("# response:", resData.data);
-            res.end(JSON.stringify(resData.data));
+            if (resData.stream) resData.stream.pipe(res);
+            else res.end(JSON.stringify(resData.data));
         }).catch((error: any) => {
             logger.error(error.message);
             res.statusCode = 500;

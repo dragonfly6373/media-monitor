@@ -1,7 +1,7 @@
 import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-import { mkDirByPathSync } from '../lib/utils';
+import { execShellCommand, mkDirByPathSync } from '../lib/utils';
 import Xvfb from '../lib/Xvfb';
 import Logger from '../lib/Logger';
 import AppConfig from '../lib/AppConfig';
@@ -9,6 +9,7 @@ import { PulseAudio } from '../lib/PulseAudio';
 import Ffmpeg from '../lib/Ffmpeg';
 
 const {
+    DOMAIN, PORT,
     // XVFB: useXVFB,
     SCREEN_WIDTH: screenWidth,
     SCREEN_HEIGHT: screenHeight,
@@ -26,12 +27,14 @@ export default class MonitorClient {
     clientUrl: string;
     rtmpUrl: string = "";
     screenNo: number = 99;
+    startTime: number = 0;
 
     xvfbProcess: any;
     pulseProcess: PulseAudio | any;
     browser: Browser | null = null;
     rtmpProcess: Ffmpeg | null = null;
     rtmpStartTime: number = 0;
+    hasRecord: boolean = false;
     recProcess: Ffmpeg | null = null;
     recStartTime: number = 0;
 
@@ -52,7 +55,8 @@ export default class MonitorClient {
             record: {
                 status: this.recProcess ? "running" : "stopped",
                 startTime: this.recStartTime,
-                duration: (Date.now() - this.recStartTime) / 1000
+                duration: (Date.now() - this.recStartTime) / 1000,
+                output: ""
             }
         }
     }
@@ -117,6 +121,7 @@ export default class MonitorClient {
             }
             this.recProcess.streamTo(filePath);
             this.recStartTime = Date.now();
+            this.hasRecord = true;
             return true;
         } catch(error: any) {
             logger.error(`RoomID ${this.roomId} record fail with error:`, error);
@@ -179,6 +184,18 @@ export default class MonitorClient {
             await this.browser?.close().catch(logger.warn);
             this.xvfbProcess?.stop(() => {});
             this.pulseProcess?.stop(() => {});
+            let result = this.getClientInfo();
+            if (this.hasRecord) {
+                let outputfile = path.join(RECORD_OUTPUT_DIR, `${this.roomId}.mp4`);
+                await Ffmpeg.concatmedias(path.join(RECORD_OUTPUT_DIR, this.roomId), outputfile, (output: string) => {
+                    logger.debug("record output ", output);
+                    result.record.output = new URL("record/download/" + this.roomId, `${DOMAIN}:${PORT}`).toString();
+                    execShellCommand(["rm", ...["-fr", path.join(RECORD_OUTPUT_DIR, this.roomId)]].join(" ")).catch((error: any) => {
+                        logger.warn("Failed to remote record folder for room: " + this.roomId + " with error: " + (error.message || error));
+                    });
+                });
+            }
+            return result;
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} can't close client browser with error: ${error.message}`);
         }

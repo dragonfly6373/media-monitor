@@ -1,8 +1,13 @@
+import path from 'path';
+import fs from 'fs';
 import {IResponseData} from './ResponseData';
 import monitorController from '../monitor/MonitorController';
+import AppConfig from '../lib/AppConfig';
 import Logger from '../lib/Logger';
 
 const logger = new Logger('RestController');
+
+const { RECORD_OUTPUT_DIR } = AppConfig.getConfigs();
 
 var INSTANCE: RestController | null = null;
 
@@ -19,7 +24,8 @@ export default class RestController {
         let resData: IResponseData = {
             headers: {'Content-Type': 'application/json'},
             code: 200,
-            data: null
+            data: null,
+            stream: null
         };
 
         switch (pathname) {
@@ -110,6 +116,25 @@ export default class RestController {
                         resData.code = 500;
                         resData.data = "Internal Server error " + (error.message || error);
                     });
+                break;
+            }
+            case '/record/download': {
+                let roomId: string = params.get("roomId") || "";
+                if (!roomId) throw new Error("Invalid input. Required params: roomId");
+                let filePath = path.join(RECORD_OUTPUT_DIR, `${roomId}.mp4`);
+                let ff = fs.statSync(filePath);
+                if (!ff.isFile()) {
+                    logger.error("record file does not exist for room " + roomId)
+                    throw new Error("record file does not exist for room " + roomId);
+                }
+                const stream = fs.createReadStream(filePath);
+                logger.info("record download", filePath, ff.size);
+                resData.headers = {
+                    'Content-Disposition': `attachment;filename=${roomId}.mp4`,
+                    'Content-Type': 'audio/mpeg',
+                    'Content-Length': ff.size
+                }
+                resData.stream = stream;
                 break;
             }
             case '/getAll': {

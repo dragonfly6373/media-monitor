@@ -87,13 +87,37 @@ export default class Ffmpeg {
         }
     }
 
+    /**
+     * Concatenating media files
+     * @param input file pattern e.g: ./*.mkv
+     * @param output file. e.g: /tmp/records/output.mp4
+     * @param callback(ouputfile)
+     */
+    static async concatmedias(input: string, output: string, callback?: Function) {
+        /* let options = [
+            "-f", "concat",
+            "-safe", "0",
+            "-i", `<(for f in ${input}; do echo "file '$PWD/$f'"; done)`,
+            "-c", "copy", output
+        ]
+        return await execShellCommand(["ffmpeg", ...options].join(" ")) */
+        return await execShellCommand(`./scripts/ff_concat.sh '${input}' '${output}'`)
+            .then((data) => {
+                logger.info("Output concatenating media file:" + output, data);
+                if (callback) callback(output);
+            })
+            .catch((error: any) => {
+                logger.warn("Failed to concatenate media files with error", (error.message || error));
+            });
+    }
+
     static killAll() {
         execShellCommand("pkill -9 ffmpeg")
             .then((data) => {
                 logger.info(" > kill all process", data);
             })
             .catch((error: any) => {
-                // logger.warn("fail to kill all ffmpeg process with error", error.message);
+                logger.warn("Failed to kill all ffmpeg process with error", (error.message || error));
             });
     }
 }
