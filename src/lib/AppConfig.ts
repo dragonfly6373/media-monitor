@@ -9,6 +9,10 @@ export default class AppConfig {
 
     XVFB: boolean = true;
     XVFB_DISPLAY_START_NUM: number = 100;
+    FFMPEG_FRAME_RATE: number = 30;
+    FFMPEG_PRESET: string = "fast";
+    FFMPEG_MAXRATE: string = "1200k";
+    FFMPEG_BUFSIZE: string = "2400k";
     SCREEN_WIDTH: number = 1365;
     SCREEN_HEIGHT: number = 767;
     CHROME_DISK_CACHE_DIR: string = "";
@@ -28,6 +32,10 @@ export default class AppConfig {
         PORT: number,
         XVFB: boolean,
         XVFB_DISPLAY_START_NUM: number,
+        FFMPEG_FRAME_RATE: number,
+        FFMPEG_PRESET: string,
+        FFMPEG_MAXRATE: string,
+        FFMPEG_BUFSIZE: string,
         SCREEN_WIDTH: number,
         SCREEN_HEIGHT: number,
         CHROME_DISK_CACHE_DIR: string,
@@ -42,6 +50,10 @@ export default class AppConfig {
         this.PORT = PORT;
         this.XVFB = XVFB;
         this.XVFB_DISPLAY_START_NUM = XVFB_DISPLAY_START_NUM;
+        this.FFMPEG_FRAME_RATE = FFMPEG_FRAME_RATE;
+        this.FFMPEG_PRESET = FFMPEG_PRESET;
+        this.FFMPEG_MAXRATE = FFMPEG_MAXRATE;
+        this.FFMPEG_BUFSIZE = FFMPEG_BUFSIZE;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
@@ -68,6 +80,10 @@ export default class AppConfig {
             parseInt(process.env.PORT || "8090"),
             parseBoolean(process.env.XVFB || "false"),
             parseInt(process.env.XVFB_DISPLAY_START_NUM || "100"),
+            parseInt(process.env.FFMPEG_FRAME_RATE || "30"),
+            process.env.FFMPEG_PRESET || "fast",
+            process.env.FFMPEG_MAXRATE || "1200k",
+            process.env.FFMPEG_BUFSIZE || "2400k",
             parseInt(process.env.SCREEN_WIDTH || "1920"),
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
             process.env.CHROME_DISK_CACHE_DIR || "",

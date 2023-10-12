@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import AppConfig from "./AppConfig";
 import Logger from "./Logger";
 import { execShellCommand, spawnProcess } from "./utils";
@@ -7,15 +8,24 @@ var logger = new Logger("FFMPEG");
 const {
     SCREEN_WIDTH: screenWidth,
     SCREEN_HEIGHT: screenHeight,
+    FFMPEG_FRAME_RATE,
+    FFMPEG_PRESET,
+    FFMPEG_MAXRATE,
+    FFMPEG_BUFSIZE
 } = AppConfig.getConfigs();
 
-export default class Ffmpeg {
+export default class Ffmpeg extends EventEmitter {
     _roomId: string;
     _display: string = ":1.0";
     _pulseSinkId: string = "default";
     _process: any;
 
+    static EVT_ERROR = "error";
+    static EVT_CLOSE = "close";
+    static EVT_EXIT = "exit";
+
     constructor(roomId: string, display: string, pulseSinkId: string) {
+        super();
         this._roomId = roomId;
         this._display = display;
         this._pulseSinkId = pulseSinkId;
@@ -29,32 +39,24 @@ export default class Ffmpeg {
      * @returns 
      */
     streamTo(dest: string) {
-        /* let localargs = [
-            '-video_size', `${screenWidth}x${screenHeight}`,
-            '-framerate',  '30',
-            '-f',          'x11grab',
-            '-i',          `:${this.screenNo}.0`,
-            '-f',          'pulse',
-            '-ac',         '2',
-            '-i',          'default',
-            '-vcodec',     'libx264',
-            // '-fps_mode',   'vfr',
-            '-f',          'flv',
-            dest,  '-y'
-        ]; */
         let args = [
             '-video_size',            `${screenWidth}x${screenHeight - 56}`,
-            '-framerate',             '25',
+            '-framerate',             `${FFMPEG_FRAME_RATE}`,
             '-f',                     'x11grab',
             '-draw_mouse',            '0',
             '-i',                     `${this._display}.0+0,56`,
             '-f',                     `pulse`,
             '-ac',                    '2',
             '-i',                     this._pulseSinkId + ".monitor",
+            '-b:a',                   '128k',
             '-vcodec',                'libx264',
             '-acodec',                'aac',
             '-max_muxing_queue_size', '99999',
-            '-preset',                'veryfast',
+            '-preset',                FFMPEG_PRESET,
+            '-maxrate',               FFMPEG_MAXRATE,
+            '-bufsize',               FFMPEG_BUFSIZE,
+            '-filter:v',              `fps=${FFMPEG_FRAME_RATE}`,
+            '-g',                     '60',
             '-f',                     'flv',
             dest,                     '-y'
         ];
@@ -69,9 +71,18 @@ export default class Ffmpeg {
                     // process.stderr.write(data);
                     // logger.debug("ffmpeg stderr", data);
                 });
-            this._process.on("error", (data: any) => logger.info("ffmpeg error", data));
-            this._process.on("close", (data: any) => logger.info("ffmpeg close", data));
-            this._process.on("exit", (data: any) => logger.info("ffmpeg exit", data));
+            this._process.on("error", (data: any) => {
+                logger.info("ffmpeg error", data);
+                this.emit(Ffmpeg.EVT_ERROR, data);
+            });
+            this._process.on("close", (data: any) => {
+                logger.info("ffmpeg close", data);
+                this.emit(Ffmpeg.EVT_CLOSE, data);
+            });
+            this._process.on("exit", (data: any) => {
+                logger.info("ffmpeg exit", data);
+                this.emit(Ffmpeg.EVT_EXIT, data);
+            });
             return this;
         } catch (error: any) {
             logger.error(`RoomID ${this._roomId} failed to start process with error`, error.message);
@@ -84,6 +95,7 @@ export default class Ffmpeg {
         if (this._process) {
             this._process.kill();
             this._process = null;
+            this.eventNames().forEach(this.removeAllListeners.bind(this));
         }
     }
 

@@ -41,6 +41,7 @@ export default class MonitorClient {
     constructor(roomId: string, clientUrl: string) {
         this.roomId = roomId;
         this.clientUrl = clientUrl;
+        this.startTime = Date.now();
     }
 
     getClientInfo() {
@@ -50,12 +51,13 @@ export default class MonitorClient {
             livestream: {
                 status: this.rtmpProcess ? "running" : "stoped",
                 startTime: this.rtmpStartTime,
-                duration: (Date.now() - this.rtmpStartTime) / 1000
+                duration: this.rtmpProcess ? (Date.now() - this.rtmpStartTime) / 1000 : 0,
+                rtmpUrl: this.rtmpUrl
             },
             record: {
                 status: this.recProcess ? "running" : "stopped",
                 startTime: this.recStartTime,
-                duration: (Date.now() - this.recStartTime) / 1000,
+                duration: this.recProcess ? (Date.now() - this.recStartTime) / 1000 : 0,
                 output: ""
             }
         }
@@ -85,28 +87,33 @@ export default class MonitorClient {
     async reload(clientUrl?: string) {
         logger.info(`RoomID ${this.roomId} reload page`);
         if (clientUrl) this.clientUrl = clientUrl;
-        if (this.browser) {
-            let [page] = await this.browser?.pages() || [null];
-            if (!page) {
-                page = await this.browser?.newPage() as Page;
-                // page.waitForDevicePrompt().catch(logger.warn);
-                // page.on('domcontentloaded', () => {
-                //     logger.debug("domcontentloaded");
-                // });
-                // page.on("load", () => logger.debug("page load"));
-            }
+        try {
+            if (this.browser) {
+                let [page] = await this.browser?.pages() || [null];
+                if (!page) {
+                    page = await this.browser?.newPage() as Page;
+                    // page.waitForDevicePrompt().catch(logger.warn);
+                    // page.on('domcontentloaded', () => {
+                    //     logger.debug("domcontentloaded");
+                    // });
+                    // page.on("load", () => logger.debug("page load"));
+                }
 
-            if (clientUrl) {
-                await page.goto(clientUrl, { waitUntil: 'networkidle2' });
-                this._handlePage(page);
+                if (clientUrl) {
+                    await page.goto(clientUrl, { waitUntil: 'networkidle2' });
+                    this._handlePage(page);
+                } else {
+                    page?.reload();
+                }
             } else {
-                page?.reload();
+                this.browser = await this._newBrowser(this.clientUrl, {
+                    xvfb: this.xvfbProcess,
+                    pulseAudio: this.pulseProcess
+                });
             }
-        } else {
-            this.browser = await this._newBrowser(this.clientUrl, {
-                xvfb: this.xvfbProcess,
-                pulseAudio: this.pulseProcess
-            });
+        } catch(error: any) {
+            logger.error("Failed to reload page with error " + (error.message || error));
+            throw new Error("Failed to reload page with error " + (error.message || error));
         }
     }
 
@@ -119,7 +126,10 @@ export default class MonitorClient {
             if (!this.recProcess) {
                 this.recProcess = new Ffmpeg(this.roomId, this.xvfbProcess.display(), this.pulseProcess.sinkId);
             }
-            this.recProcess.streamTo(filePath);
+            this.recProcess.streamTo(filePath)
+                // .on(Ffmpeg.EVT_ERROR, (data) => {})
+                .on(Ffmpeg.EVT_EXIT, (data) => this.recPause());
+                // .on(Ffmpeg.EVT_CLOSE, (data) => {});
             this.recStartTime = Date.now();
             this.hasRecord = true;
             return true;
@@ -197,6 +207,7 @@ export default class MonitorClient {
             }
             return result;
         } catch(error: any) {
+            logger.error("Failed to stop client with error: ", (error.message || error));
             throw new Error(`RoomID ${this.roomId} can't close client browser with error: ${error.message}`);
         }
     }
@@ -227,7 +238,8 @@ export default class MonitorClient {
                     "-displayID", ":" + this.screenNo
                 ]
             });
-            p.startSync();
+            p.startSync()
+                .on(Xvfb.EVT_ERROR, () => p.stop());
             this.pulseProcess?.restoreSinkEnvVariable();
             return p;
         } catch(error: any) {

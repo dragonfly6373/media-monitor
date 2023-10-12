@@ -38,18 +38,21 @@ class MonitorController {
 
     async reload(roomId: string, clientUrl: string) {
         if (!this.clientMap.has(roomId)) {
+            logger.error("no client data for room " + roomId);
             throw new Error("no client data for room " + roomId);
         }
         try {
             let client = this.clientMap.get(roomId) as MonitorClient;
             client?.reload(clientUrl);
         } catch(error: any) {
+            logger.error("Failed to reload browser client for room " + roomId + " with error" + (error.message || error));
             throw new Error("Failed to reload browser client for room " + roomId + " with error" + (error.message || error));
         }
     }
 
     async stopClient(roomId: string) {
         if (!this.clientMap.has(roomId)) {
+            logger.error("No client data for room " + roomId);
             throw new Error("No client data for room " + roomId);
         }
         try {
@@ -61,6 +64,7 @@ class MonitorController {
                 this.cleanResource();
             }
         } catch(error: any) {
+            logger.error("Failed to stop browser client for room " + roomId + " with error" + error.message);
             throw new Error("Failed to stop browser client for room " + roomId + " with error" + error.message);
         }
     }

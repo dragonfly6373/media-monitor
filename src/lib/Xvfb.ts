@@ -2,6 +2,7 @@ import fs from 'fs';
 import { spawn } from 'child_process';
 import { execShellCommand, parseBoolean, spawnProcess } from './utils';
 import Logger from './Logger';
+import { EventEmitter } from 'node:events';
 
 var logger = new Logger("Xvfb");
 
@@ -11,7 +12,7 @@ var usleep: any = (microsecs: number) => {
     while (Date.now() <= deadline);
 };
 
-export default class Xvfb {
+export default class Xvfb extends EventEmitter {
     _display: string;
     _oldDisplay: string = "";
     _reuse: boolean;
@@ -20,7 +21,12 @@ export default class Xvfb {
     _xvfb_args: Array<string> = [];
     _process: any;
 
+    static EVT_ERROR = "error";
+    static EVT_CLOSE = "close";
+    static EVT_EXIT = "exit";
+
     constructor(options: any) {
+        super();
         options = options || {};
         this._display = ":" + options.displayNo;
         this._reuse = options.reuse;
@@ -102,7 +108,7 @@ export default class Xvfb {
         return this._process;
     }
 
-    stop(cb: Function) {
+    stop(cb?: Function) {
         if (this._process) {
             this._killProcess();
             this._restoreDisplayEnvVariable();
@@ -178,14 +184,26 @@ export default class Xvfb {
             }
         });
         // Bind an error listener to prevent an error from crashing node.
-        this._process.once('error', function (e: any) {
+        this._process.on('error', function (e: any) {
             onAsyncSpawnError(e);
+        });
+        this._process.on("close", (data: any) => {
+            logger.info("Xvfb close", data);
+            this.emit(Xvfb.EVT_CLOSE, data);
+        });
+        this._process.on("exit", (data: any) => {
+            logger.info("Xvfb exit", data);
+            this.emit(Xvfb.EVT_EXIT, data);
         });
     }
 
     _killProcess() {
-        this._process.kill();
-        this._process = null;
+        logger.info(`DISPLAY ${this._display} - End current process`);
+        if (this._process) {
+            this._process.kill();
+            this._process = null;
+            this.eventNames().forEach(this.removeAllListeners.bind(this));
+        }
     }
 
     _lockFile(displayNo?: number): string {
