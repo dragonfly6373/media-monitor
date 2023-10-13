@@ -11,7 +11,8 @@ const {
     FFMPEG_FRAME_RATE,
     FFMPEG_PRESET,
     FFMPEG_MAXRATE,
-    FFMPEG_BUFSIZE
+    FFMPEG_BUFSIZE,
+    FFMPEG_AUDIO_BITRATE
 } = AppConfig.getConfigs();
 
 export default class Ffmpeg extends EventEmitter {
@@ -48,7 +49,7 @@ export default class Ffmpeg extends EventEmitter {
             '-f',                     `pulse`,
             '-ac',                    '2',
             '-i',                     this._pulseSinkId + ".monitor",
-            '-b:a',                   '128k',
+            '-b:a',                   FFMPEG_AUDIO_BITRATE,
             '-vcodec',                'libx264',
             '-acodec',                'aac',
             '-max_muxing_queue_size', '99999',

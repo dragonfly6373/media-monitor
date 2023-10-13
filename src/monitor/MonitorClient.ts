@@ -49,7 +49,7 @@ export default class MonitorClient {
             roomId: this.roomId,
             clientUrl: this.clientUrl,
             livestream: {
-                status: this.rtmpProcess ? "running" : "stoped",
+                status: this.rtmpProcess ? "running" : "stopped",
                 startTime: this.rtmpStartTime,
                 duration: this.rtmpProcess ? (Date.now() - this.rtmpStartTime) / 1000 : 0,
                 rtmpUrl: this.rtmpUrl

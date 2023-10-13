@@ -13,6 +13,7 @@ export default class AppConfig {
     FFMPEG_PRESET: string = "fast";
     FFMPEG_MAXRATE: string = "1200k";
     FFMPEG_BUFSIZE: string = "2400k";
+    FFMPEG_AUDIO_BITRATE: string = "128k";
     SCREEN_WIDTH: number = 1365;
     SCREEN_HEIGHT: number = 767;
     CHROME_DISK_CACHE_DIR: string = "";
@@ -21,6 +22,7 @@ export default class AppConfig {
     RECORD_OUTPUT_DIR: string = "./temp/records";
 
     LOGGER_CONFIGS: {
+        appName: string,
         level: number,
         isWriteToFile: boolean,
         logDir: string,
@@ -36,11 +38,13 @@ export default class AppConfig {
         FFMPEG_PRESET: string,
         FFMPEG_MAXRATE: string,
         FFMPEG_BUFSIZE: string,
+        FFMPEG_AUDIO_BITRATE: string,
         SCREEN_WIDTH: number,
         SCREEN_HEIGHT: number,
         CHROME_DISK_CACHE_DIR: string,
         CHROME_DISK_CACHE_SIZE: number,
         RECORD_OUTPUT_DIR: string,
+        LOGGER_APPNAME: string,
         LOGGER_LEVEL: number,
         LOGGER_WRITE_FILE: boolean,
         LOGGER_OUTPUT: string,
@@ -54,12 +58,14 @@ export default class AppConfig {
         this.FFMPEG_PRESET = FFMPEG_PRESET;
         this.FFMPEG_MAXRATE = FFMPEG_MAXRATE;
         this.FFMPEG_BUFSIZE = FFMPEG_BUFSIZE;
+        this.FFMPEG_AUDIO_BITRATE = FFMPEG_AUDIO_BITRATE;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
         this.CHROME_DISK_CACHE_SIZE = CHROME_DISK_CACHE_SIZE;
         this.RECORD_OUTPUT_DIR = RECORD_OUTPUT_DIR;
         this.LOGGER_CONFIGS = {
+            appName: LOGGER_APPNAME,
             level: LOGGER_LEVEL,
             isWriteToFile: LOGGER_WRITE_FILE,
             logDir: LOGGER_OUTPUT,
@@ -84,11 +90,13 @@ export default class AppConfig {
             process.env.FFMPEG_PRESET || "fast",
             process.env.FFMPEG_MAXRATE || "1200k",
             process.env.FFMPEG_BUFSIZE || "2400k",
+            process.env.FFMPEG_AUDIO_BITRATE || "128k",
             parseInt(process.env.SCREEN_WIDTH || "1920"),
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
             process.env.CHROME_DISK_CACHE_DIR || "",
             parseInt(process.env.CHROME_DISK_CACHE_SIZE || "33554432"),
             process.env.RECORD_OUTPUT_DIR || "",
+            process.env.LOGGER_APPNAME || "",
             parseInt(process.env.LOGGER_LEVEL || "4"),
             parseBoolean(process.env.LOGGER_WRITE_FILE || "false"),
             process.env.LOGGER_OUTPUT || "",
