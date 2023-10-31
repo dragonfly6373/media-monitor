@@ -1,5 +1,5 @@
 import path from 'path';
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, KeyInput, Page } from 'puppeteer';
 
 import { execShellCommand, mkDirByPathSync } from '../lib/utils';
 import Xvfb from '../lib/Xvfb';
@@ -25,6 +25,7 @@ const logger = new Logger('MonitorClient');
 export default class MonitorClient {
     roomId: string;
     clientUrl: string;
+    assertions: any;
     rtmpUrl: string = "";
     screenNo: number = 99;
     startTime: number = 0;
@@ -38,9 +39,10 @@ export default class MonitorClient {
     recProcess: Ffmpeg | null = null;
     recStartTime: number = 0;
 
-    constructor(roomId: string, clientUrl: string) {
+    constructor(roomId: string, clientUrl: string, assertions: any) {
         this.roomId = roomId;
         this.clientUrl = clientUrl;
+        this.assertions = assertions;
         this.startTime = Date.now();
     }
 
@@ -100,8 +102,10 @@ export default class MonitorClient {
                 }
 
                 if (clientUrl) {
-                    await page.goto(clientUrl, { waitUntil: 'networkidle2' });
-                    this._handlePage(page);
+                    page.goto(clientUrl, { waitUntil: 'networkidle2' }).then(() => {
+                        // this._handlePage(page);
+                        this._assertPage(page);
+                    });
                 } else {
                     page?.reload();
                 }
@@ -297,9 +301,11 @@ export default class MonitorClient {
             page.on("domcontentloaded", () => logger.debug("domcontentloaded"));
             page.on("load", () => {
                 logger.debug("page loaded");
-                this._handlePage(page);
+                // this._handlePage(page);
+                this._assertPage(page);
             });
-            this._handlePage(page);
+            // this._handlePage(page);
+            this._assertPage(page);
         } catch (error: any) {
             // return callback(error);
             logger.error(`RoomID ${this.roomId} Failed to create new browser with error:`, error);
@@ -308,6 +314,20 @@ export default class MonitorClient {
             return browser as Browser;
         }
     };
+
+    _assertPage(page: Page) {
+        logger.info(`RoomID ${this.roomId} assertPage`, this.assertions );
+        if (!this.assertions || !(this.assertions instanceof Array)) return;
+        try {
+            this.assertions.forEach(a => {
+                Object.setPrototypeOf({
+                    ...a, page: page
+                }, Assertion.prototype).assert();
+            });
+        } catch (error: any) {
+            logger.warn(`RoomID ${this.roomId} assert element error`, error);
+        }
+    }
 
     _handlePage(page?: Page | null) {
         if (!page) return;
@@ -322,13 +342,13 @@ export default class MonitorClient {
                 .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error)); */
 
             /** for test zing mp3 page */
-            page.waitForSelector(".btn-play-all")
+            /* page.waitForSelector(".btn-play-all")
                 .then(() => {
                     page.$eval(".btn-play-all", (el: any) => {
                         el?.click();
                     }).catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
                 })
-                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error));
+                .catch((error: any) => logger.warn(`RoomID ${this.roomId} assert element error`, error)); */
 
             /** GoMeet click to join audio */
             page.waitForSelector("#join-audio-btn")
@@ -351,6 +371,83 @@ export default class MonitorClient {
                 .catch((error: any) => {logger.warn(`RoomID ${this.roomId} assert element error`, error.message)});
         } catch (error: any) {
             logger.warn(`RoomID ${this.roomId} fail to handle page element with error:`, error.message);
+        }
+    }
+}
+
+// [{"selector": "#join-audio-btn", "action": "wait", "assertions": [{"selector": "#join-audio-btn", "action": "click"}]}, {"selector": "#btnFullScreen", "action": "wait", "assertions": [{"selector": "#btnFullScreen", "action": "click"}]}]
+class Assertion {
+    page: Page;
+    selector: string;
+    action: string;
+    params: Array<any>;
+    assertions: Array<Assertion>;
+
+    static ACTIONS = Object.freeze({
+        WAIT: "wait",
+        CLICK: "click",
+        FOCUS: "focus",
+        TYPE: "type",
+        PRESS: "press"
+    });
+
+    constructor(page: Page, selector: string, action: string, params: Array<any>) {
+        this.page = page;
+        this.selector = selector;
+        this.action = action;
+        this.params = params;
+        this.assertions = [];
+    }
+
+    async assert() {
+        logger.debug("assert", this.selector, this.action, this.params, this.assertions);
+        try {
+            switch (this.action) {
+                case Assertion.ACTIONS.WAIT: {
+                    await this.page.waitForSelector(this.selector);
+                        /* .then(() => {
+                            this.assertions.forEach(a => {
+                                Object.setPrototypeOf({
+                                    ...a, page: this.page
+                                }, Assertion.prototype).assert();
+                            });
+                        }); */
+                    break;
+                }
+                case Assertion.ACTIONS.CLICK: {
+                    await this.page.$eval(this.selector, (element: any) => {
+                        element.click();
+                    });
+                    break;
+                }
+                case Assertion.ACTIONS.FOCUS: {
+                    await this.page.$eval(this.selector, (element: any) => {
+                        element.focus();
+                    });
+                    break;
+                }
+                case Assertion.ACTIONS.TYPE: {
+                    await this.page.$eval(this.selector, (element: any) => {
+                        element.value = this.params;
+                    });
+                    break;
+                }
+                case Assertion.ACTIONS.PRESS: {
+                    await this.page.keyboard.press(this.params[0] as KeyInput);
+                    break;
+                }
+                default:
+                    break;
+            }
+            if (!this.assertions || !(this.assertions instanceof Array)) return;
+            this.assertions.forEach(a => {
+                // new Assertion(this.page, a.selector, a.action, a.params);
+                Object.setPrototypeOf({
+                    ...a, page: this.page
+                }, Assertion.prototype).assert();
+            });
+        } catch (error: any) {
+            logger.warn(`Assert element error`, error);
         }
     }
 }

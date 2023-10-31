@@ -32,10 +32,11 @@ export default class RestController {
             case '/live': {
                 let roomId: string = params.get("roomId") || "";
                 let clientUrl: string = params.get("clientUrl") || "";
+                let clientAssertions: any = JSON.parse(params.get("assertions") || "{}");
                 let rtmpServer: string = params.get("rtmpServer") || "";
                 if (!roomId || !clientUrl || !rtmpServer) throw new Error("Invalid input. Required params: roomId, clientUrl, rtmpServer");
                 try {
-                    let client = await monitorController.createClient(roomId, clientUrl);
+                    let client = await monitorController.createClient(roomId, clientUrl, clientAssertions);
                     // let res = await axios.get(`${rtmpServer}/control/get?room=${roomId}`, {timeout: 5000});
                     // let {status, data: channelkey} = res.data;
                     // logger.debug("# get rtmp url", res.data);
@@ -64,10 +65,11 @@ export default class RestController {
             case '/recStart': {
                 let roomId: string = params.get("roomId") || "";
                 let clientUrl: string = params.get("clientUrl") || "";
+                let clientAssertions: any = JSON.parse(params.get("assertions") || "null");
                 if (!roomId) throw new Error("Invalid input. Required params: roomId");
                 logger.info("recStart", {roomId});
                 try {
-                    let client = await monitorController.createClient(roomId, clientUrl);
+                    let client = await monitorController.createClient(roomId, clientUrl, clientAssertions);
                     client?.recStart();
                     resData.data = true;
                 } catch(error: any) {
