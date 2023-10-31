@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+    livestream:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - 8090:8090
+        volumes:
+            - /tmp/live-streaming/:/tmp/live-streaming/
+        networks:
+            - streaming_net
+    nginx-rtmp:
+        build:
+            context: .
+            dockerfile: Dockerfile.cdn
+        ports:
+            - 1936:1935
+            - 8080
+            - 8088
+        networks:
+            - streaming_net
+volumes:
+    /tmp/live-streaming
+
+networks:
+    streaming_net
