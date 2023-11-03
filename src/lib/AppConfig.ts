@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { parseBoolean } from "./utils";
+import { parseArray, parseBoolean } from "./utils";
 
 dotenv.config();
 
@@ -10,6 +10,7 @@ export default class AppConfig {
     XVFB: boolean = true;
     XVFB_DISPLAY_START_NUM: number = 100;
     FFMPEG_FRAME_RATE: number = 30;
+    FFMPEG_PROBESIZE: string = "42M";
     FFMPEG_PRESET: string = "fast";
     FFMPEG_MAXRATE: string = "1200k";
     FFMPEG_BUFSIZE: string = "2400k";
@@ -18,6 +19,8 @@ export default class AppConfig {
     SCREEN_HEIGHT: number = 767;
     CHROME_DISK_CACHE_DIR: string = "";
     CHROME_DISK_CACHE_SIZE: number = 33554432; // 32 * 1024 * 1024
+    CHROME_ENABLE_CLIENT_DOMAIN: Array<string> = [];
+    CHROME_OVERRIDE_PERMISSION: Array<string> = [];
 
     RECORD_OUTPUT_DIR: string = "./temp/records";
 
@@ -35,6 +38,7 @@ export default class AppConfig {
         XVFB: boolean,
         XVFB_DISPLAY_START_NUM: number,
         FFMPEG_FRAME_RATE: number,
+        FFMPEG_PROBESIZE: string,
         FFMPEG_PRESET: string,
         FFMPEG_MAXRATE: string,
         FFMPEG_BUFSIZE: string,
@@ -43,6 +47,8 @@ export default class AppConfig {
         SCREEN_HEIGHT: number,
         CHROME_DISK_CACHE_DIR: string,
         CHROME_DISK_CACHE_SIZE: number,
+        CHROME_ENABLE_CLIENT_DOMAIN: Array<string>,
+        CHROME_OVERRIDE_PERMISSION: Array<string>,
         RECORD_OUTPUT_DIR: string,
         LOGGER_APPNAME: string,
         LOGGER_LEVEL: number,
@@ -55,6 +61,7 @@ export default class AppConfig {
         this.XVFB = XVFB;
         this.XVFB_DISPLAY_START_NUM = XVFB_DISPLAY_START_NUM;
         this.FFMPEG_FRAME_RATE = FFMPEG_FRAME_RATE;
+        this.FFMPEG_PROBESIZE = FFMPEG_PROBESIZE;
         this.FFMPEG_PRESET = FFMPEG_PRESET;
         this.FFMPEG_MAXRATE = FFMPEG_MAXRATE;
         this.FFMPEG_BUFSIZE = FFMPEG_BUFSIZE;
@@ -63,6 +70,8 @@ export default class AppConfig {
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
         this.CHROME_DISK_CACHE_SIZE = CHROME_DISK_CACHE_SIZE;
+        this.CHROME_ENABLE_CLIENT_DOMAIN = CHROME_ENABLE_CLIENT_DOMAIN;
+        this.CHROME_OVERRIDE_PERMISSION = CHROME_OVERRIDE_PERMISSION;
         this.RECORD_OUTPUT_DIR = RECORD_OUTPUT_DIR;
         this.LOGGER_CONFIGS = {
             appName: LOGGER_APPNAME,
@@ -87,6 +96,7 @@ export default class AppConfig {
             parseBoolean(process.env.XVFB || "false"),
             parseInt(process.env.XVFB_DISPLAY_START_NUM || "100"),
             parseInt(process.env.FFMPEG_FRAME_RATE || "30"),
+            process.env.FFMPEG_PROBESIZE || "42M",
             process.env.FFMPEG_PRESET || "fast",
             process.env.FFMPEG_MAXRATE || "1200k",
             process.env.FFMPEG_BUFSIZE || "2400k",
@@ -95,6 +105,8 @@ export default class AppConfig {
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
             process.env.CHROME_DISK_CACHE_DIR || "",
             parseInt(process.env.CHROME_DISK_CACHE_SIZE || "33554432"),
+            parseArray(process.env.CHROME_ENABLE_CLIENT_DOMAIN),
+            parseArray(process.env.CHROME_OVERRIDE_PERMISSION),
             process.env.RECORD_OUTPUT_DIR || "",
             process.env.LOGGER_APPNAME || "",
             parseInt(process.env.LOGGER_LEVEL || "4"),

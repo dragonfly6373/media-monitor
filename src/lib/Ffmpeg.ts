@@ -9,6 +9,7 @@ const {
     SCREEN_WIDTH: screenWidth,
     SCREEN_HEIGHT: screenHeight,
     FFMPEG_FRAME_RATE,
+    FFMPEG_PROBESIZE,
     FFMPEG_PRESET,
     FFMPEG_MAXRATE,
     FFMPEG_BUFSIZE,
@@ -43,6 +44,7 @@ export default class Ffmpeg extends EventEmitter {
         let args = [
             '-video_size',            `${screenWidth}x${screenHeight - 56}`,
             '-framerate',             `${FFMPEG_FRAME_RATE}`,
+            '-probesize',             `${FFMPEG_PROBESIZE}`,
             '-f',                     'x11grab',
             '-draw_mouse',            '0',
             '-i',                     `${this._display}.0+0,56`,

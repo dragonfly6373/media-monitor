@@ -1,5 +1,5 @@
 import path from 'path';
-import puppeteer, { Browser, KeyInput, Page } from 'puppeteer';
+import puppeteer, { Browser, KeyInput, Page, Permission } from 'puppeteer';
 
 import { execShellCommand, mkDirByPathSync } from '../lib/utils';
 import Xvfb from '../lib/Xvfb';
@@ -15,6 +15,8 @@ const {
     SCREEN_HEIGHT: screenHeight,
     CHROME_DISK_CACHE_DIR,
     CHROME_DISK_CACHE_SIZE,
+    CHROME_ENABLE_CLIENT_DOMAIN,
+    CHROME_OVERRIDE_PERMISSION,
     RECORD_OUTPUT_DIR
 } = AppConfig.getConfigs();
 
@@ -269,6 +271,7 @@ export default class MonitorClient {
                 args: [
                     '--no-sandbox', // Stability and security will suffer
                     '--disable-infobars',
+                    '--disable-notifications',
                     // '--disable-setuid-sandbox', // Stability and security will suffer
                     '--disable-print-preview',
                     '--disable-site-isolation-trials',
@@ -287,10 +290,10 @@ export default class MonitorClient {
                 ]
             });
             const context = browser.defaultBrowserContext();
-            [
-                'https://gomeetv3-dev.vnptit.vn',
-                'https://gomeetv3.vnptit.vn'
-            ].forEach((domain) => context.overridePermissions(domain, ['notifications']));
+            if (CHROME_OVERRIDE_PERMISSION && CHROME_OVERRIDE_PERMISSION.length) {
+                CHROME_ENABLE_CLIENT_DOMAIN.forEach((domain) => context.overridePermissions(domain, CHROME_OVERRIDE_PERMISSION as Array<Permission>));
+            }
+
             // let page: Page = await browser.newPage();
             let [page] = await browser.pages();
             if (!page) page = await browser.newPage();
@@ -405,30 +408,29 @@ class Assertion {
             switch (this.action) {
                 case Assertion.ACTIONS.WAIT: {
                     await this.page.waitForSelector(this.selector);
-                        /* .then(() => {
-                            this.assertions.forEach(a => {
-                                Object.setPrototypeOf({
-                                    ...a, page: this.page
-                                }, Assertion.prototype).assert();
-                            });
-                        }); */
                     break;
                 }
                 case Assertion.ACTIONS.CLICK: {
-                    await this.page.$eval(this.selector, (element: any) => {
-                        element.click();
+                    await this.page.waitForSelector(this.selector).then(() => {
+                        this.page.$eval(this.selector, (element: any) => {
+                            element.click();
+                        });
                     });
                     break;
                 }
                 case Assertion.ACTIONS.FOCUS: {
-                    await this.page.$eval(this.selector, (element: any) => {
-                        element.focus();
+                    await this.page.waitForSelector(this.selector).then(() => {
+                        this.page.$eval(this.selector, (element: any) => {
+                            element.focus();
+                        });
                     });
                     break;
                 }
                 case Assertion.ACTIONS.TYPE: {
-                    await this.page.$eval(this.selector, (element: any) => {
-                        element.value = this.params;
+                    await this.page.waitForSelector(this.selector).then(() => {
+                        this.page.$eval(this.selector, (element: any) => {
+                            element.value = this.params;
+                        });
                     });
                     break;
                 }
