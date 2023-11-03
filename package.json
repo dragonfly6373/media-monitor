@@ -10,7 +10,7 @@
     "build:prod": "npm run clean && webpack",
     "start:prod": "node ./dist/server.js",
     "build:docker-base": "docker build -f Dockerfile.ubuntu -t livestream-base:v1.0.1 .",
-    "build:docker": "npm run build && docker build -t media-monitor:v1.0.1 .",
+    "build:docker": "docker build -t media-monitor:v1.0.1 .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
