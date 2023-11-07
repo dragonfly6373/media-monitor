@@ -62,29 +62,44 @@
 
 ## Enviroment:
 ```
+# Server Configurations
+# DOMAIN=http://127.0.0.1
 DOMAIN=http://localhost
 PORT=8090
+
+# Screen Resolution
+# FFMPEG is used to transcode the rtmp input into 3 HLS outputs. [640x360], [842x480], [1280x720]
+# More resolution [1365x767], [1920x1080], [2560x1440]
+XVFB=true
 XVFB_DISPLAY_START_NUM=2
 SCREEN_WIDTH=1280
 SCREEN_HEIGHT=720
 
-# Puppeteer
-CHROME_DISK_CACHE_DIR=./temp/gomeet-v3/browser-cache-disk
-CHROME_DISK_CACHE_SIZE=33554432
-ENABLE_CLIENT_DOMAIN=https://vnptit.vn,https://gomeetv3.vnptit.vn,https://gomeetv3-dev.vnptit.vn,https://gomeet.vnpt.vn
+# FFMPEG
+FFMPEG_FRAME_RATE=30
+FFMPEG_CRF=23
+FFMPEG_PRESET=veryfast
+FFMPEG_MAXRATE=2400k
+FFMPEG_BUFSIZE=600k
+FFMPEG_PROBESIZE=42M
+FFMPEG_AUDIO_BITRATE=128k
 
-# RTMP Server
-RTMP_SERVER=http://10.70.123.13:8890
-RTMP_UPSTREAM=rtmp://10.70.123.13:1945
+# Puppeteer
+CHROME_DISK_CACHE_DIR=/tmp/live-streaming/browser-cache-disk
+CHROME_DISK_CACHE_SIZE=33554432
+CHROME_ENABLE_CLIENT_DOMAIN=https://vnptit.vn,https://vnpt.vn,https://gomeetv3.vnptit.vn,https://gomeetv3-dev.vnptit.vn,https://gomeet.vnpt.vn,https://gomesainterk05.vnpt.vn
+CHROME_OVERRIDE_PERMISSION=notifications
 
 # Recording
-RECORD_OUTPUT_DIR=./tmp/records
+RECORD_OUTPUT_DIR=/tmp/live-streaming/records
 
 # Logger Configurations
+LOGGER_APPNAME=media-stream
 LOGGER_LEVEL=4
-LOGGER_WRITE_FILE=false
-LOGGER_OUTPUT=/var/log/gomeet-v3/monitor
+LOGGER_WRITE_FILE=true
+LOGGER_OUTPUT=/var/log/live-streaming
 LOGGER_TIME_INCLUDED=true
+
 ```
 ## Server
 **File:** ./src/server.ts
@@ -155,7 +170,7 @@ Kill current Ffmpeg for room
 * **success**: boolean
 
 ## Monitor Controller
-Monitor all room client. Each room has only one client manage by roomId
+Monitor all room clients. Each room has only one client manage by roomId
 
 **Properties:**
 * **clientMap**: Map<string, MonitorClient> = new Map()
@@ -267,7 +282,7 @@ FFmpeg is a free and open-source software project consisting of a suite of libra
 3. **kill()**
 3. static **killAll()**
 
-# Refferences:
+# References:
 ## Puppeteer:
 * [Puppeteer](https://devdocs.io/puppeteer/)
 

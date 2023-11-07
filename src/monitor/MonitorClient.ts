@@ -378,7 +378,7 @@ export default class MonitorClient {
     }
 }
 
-// [{"selector": "#join-audio-btn", "action": "wait", "assertions": [{"selector": "#join-audio-btn", "action": "click"}]}, {"selector": "#btnFullScreen", "action": "wait", "assertions": [{"selector": "#btnFullScreen", "action": "click"}]}]
+// [{"selector": ".ytp-play-button", "action": "click"}, {"selector":".ytp-fullscreen-button", "action": "click"}]
 class Assertion {
     page: Page;
     selector: string;
