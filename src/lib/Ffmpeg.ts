@@ -10,11 +10,14 @@ const {
     SCREEN_HEIGHT: screenHeight,
     FFMPEG_FRAME_RATE,
     FFMPEG_PROBESIZE,
+    FFMPEG_MAX_MUXING_QUEUE_SIZE,
     FFMPEG_CRF,
     FFMPEG_PRESET,
+    FFMPEG_FPS,
     FFMPEG_MAXRATE,
     FFMPEG_BUFSIZE,
-    FFMPEG_AUDIO_BITRATE
+    FFMPEG_AUDIO_BITRATE,
+    FFMPEG_VIDEO_BITRATE
 } = AppConfig.getConfigs();
 
 export default class Ffmpeg extends EventEmitter {
@@ -52,12 +55,14 @@ export default class Ffmpeg extends EventEmitter {
             '-f',                     `pulse`,
             '-ac',                    '2',
             '-i',                     this._pulseSinkId + ".monitor",
+            '-acodec',                'aac',
             '-b:a',                   FFMPEG_AUDIO_BITRATE,
             '-vcodec',                'libx264',
-            '-acodec',                'aac',
-            '-max_muxing_queue_size', '1024',
+            '-b:v',                   FFMPEG_VIDEO_BITRATE,
+            '-max_muxing_queue_size', `${FFMPEG_MAX_MUXING_QUEUE_SIZE}`,
             '-crf',                   `${FFMPEG_CRF}`,
             '-preset',                FFMPEG_PRESET,
+            '-r',                     `${FFMPEG_FPS}`,
             '-maxrate',               FFMPEG_MAXRATE,
             '-bufsize',               FFMPEG_BUFSIZE,
             '-filter:v',              `fps=${FFMPEG_FRAME_RATE}`,

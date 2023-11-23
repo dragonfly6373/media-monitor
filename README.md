@@ -1,6 +1,8 @@
 # Usage:
 
 ## Install All Dependencies
+Follow Docker.base to install all libraries and dependencies: Ffmpeg, PulseAudio, Puppeteer, Xvfb
+
 > npm install
 
 ## Run Dev
@@ -50,7 +52,14 @@
 > npm run build:docker
 
 ## Run Docker:
-> sudo docker run --privileged -it --rm -p 8090:8090 -v $(pwd)/tmp/records:/tmp/live-streaming/records -v $(pwd)/tmp/--name live-streaming nguyendang2022/media-monitor:v1.0.1
+> sudo docker run --privileged -it --rm \
+> -p 8090:8090 \
+> -v $(pwd)/tmp/records:/tmp/live-streaming/records \
+> -v $(pwd)/tmp/log:/var/log/live-streaming \
+> -v $(pwd)/.env:/opt/live-streaming/.env \
+> --network host \
+> --name live-streaming \
+> media-monitor:v1.0.1
 
 ## Build Production:
 > npm run build:prod
@@ -62,8 +71,6 @@
 
 ## Enviroment:
 ```
-# Server Configurations
-# DOMAIN=http://127.0.0.1
 DOMAIN=http://localhost
 PORT=8090
 

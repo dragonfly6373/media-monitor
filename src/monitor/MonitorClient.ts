@@ -223,7 +223,7 @@ export default class MonitorClient {
     _newScreen(): Xvfb {
         try {
             logger.info(`RoomID ${this.roomId} Xvfb start newScreen`, this.screenNo, `${screenWidth}x${screenHeight}x24`);
-            this.pulseProcess?.setSinkEnvVariable();
+            // this.pulseProcess?.setSinkEnvVariable();
             /* let p = spawnProcess("Xvfb", [
                 ":" + this.screenNo, "-ac",
                 "-screen", "+extension", `${screenWidth}x${screenHeight}x24`,
@@ -246,7 +246,7 @@ export default class MonitorClient {
             });
             p.startSync()
                 .on(Xvfb.EVT_ERROR, () => p.stop());
-            this.pulseProcess?.restoreSinkEnvVariable();
+            // this.pulseProcess?.restoreSinkEnvVariable();
             return p;
         } catch(error: any) {
             throw new Error(`RoomID ${this.roomId} Failed to start Xvfb virtual screen with error ` + error.message);

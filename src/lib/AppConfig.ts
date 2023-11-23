@@ -12,11 +12,14 @@ export default class AppConfig {
 
     FFMPEG_FRAME_RATE: number = 30;
     FFMPEG_PROBESIZE: string = "42M";
+    FFMPEG_MAX_MUXING_QUEUE_SIZE: number = 1024;
     FFMPEG_CRF: number = 23;
     FFMPEG_PRESET: string = "fast";
+    FFMPEG_FPS: number = 12;
     FFMPEG_MAXRATE: string = "1200k";
     FFMPEG_BUFSIZE: string = "2400k";
     FFMPEG_AUDIO_BITRATE: string = "128k";
+    FFMPEG_VIDEO_BITRATE: string = "15000k";
 
     SCREEN_WIDTH: number = 1365;
     SCREEN_HEIGHT: number = 767;
@@ -43,11 +46,14 @@ export default class AppConfig {
         XVFB_DISPLAY_START_NUM: number,
         FFMPEG_FRAME_RATE: number,
         FFMPEG_PROBESIZE: string,
+        FFMPEG_MAX_MUXING_QUEUE_SIZE: number,
         FFMPEG_CRF: number,
         FFMPEG_PRESET: string,
+        FFMPEG_FPS: number,
         FFMPEG_MAXRATE: string,
         FFMPEG_BUFSIZE: string,
         FFMPEG_AUDIO_BITRATE: string,
+        FFMPEG_VIDEO_BITRATE: string,
         SCREEN_WIDTH: number,
         SCREEN_HEIGHT: number,
         CHROME_DISK_CACHE_DIR: string,
@@ -67,11 +73,14 @@ export default class AppConfig {
         this.XVFB_DISPLAY_START_NUM = XVFB_DISPLAY_START_NUM;
         this.FFMPEG_FRAME_RATE = FFMPEG_FRAME_RATE;
         this.FFMPEG_PROBESIZE = FFMPEG_PROBESIZE;
+        this.FFMPEG_MAX_MUXING_QUEUE_SIZE = FFMPEG_MAX_MUXING_QUEUE_SIZE;
         this.FFMPEG_CRF = FFMPEG_CRF;
         this.FFMPEG_PRESET = FFMPEG_PRESET;
+        this.FFMPEG_FPS = FFMPEG_FPS;
         this.FFMPEG_MAXRATE = FFMPEG_MAXRATE;
         this.FFMPEG_BUFSIZE = FFMPEG_BUFSIZE;
         this.FFMPEG_AUDIO_BITRATE = FFMPEG_AUDIO_BITRATE;
+        this.FFMPEG_VIDEO_BITRATE = FFMPEG_VIDEO_BITRATE;
         this.SCREEN_WIDTH = SCREEN_WIDTH;
         this.SCREEN_HEIGHT = SCREEN_HEIGHT;
         this.CHROME_DISK_CACHE_DIR = CHROME_DISK_CACHE_DIR;
@@ -103,11 +112,14 @@ export default class AppConfig {
             parseInt(process.env.XVFB_DISPLAY_START_NUM || "100"),
             parseInt(process.env.FFMPEG_FRAME_RATE || "30"),
             process.env.FFMPEG_PROBESIZE || "42M",
+            parseInt(process.env.FFMPEG_MAX_MUXING_QUEUE_SIZE || "1024"),
             parseInt(process.env.FFMPEG_CRF || "23"),
-            process.env.FFMPEG_PRESET || "fast",
+            process.env.FFMPEG_PRESET || "veryfast",
+            parseInt(process.env.FFPMEG_FPS || "12"),
             process.env.FFMPEG_MAXRATE || "1200k",
             process.env.FFMPEG_BUFSIZE || "2400k",
             process.env.FFMPEG_AUDIO_BITRATE || "128k",
+            process.env.FFMPEG_VIDEO_BITRATE || "15000k",
             parseInt(process.env.SCREEN_WIDTH || "1920"),
             parseInt(process.env.SCREEN_HEIGHT || "1080"),
             process.env.CHROME_DISK_CACHE_DIR || "",
